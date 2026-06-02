@@ -1,0 +1,13 @@
+--- a/codex-rs/linux-sandbox/src/landlock.rs
++++ b/codex-rs/linux-sandbox/src/landlock.rs
+@@ -254,6 +254,10 @@
+             TargetArch::x86_64
+         } else if cfg!(target_arch = "aarch64") {
+             TargetArch::aarch64
++        } else if cfg!(target_arch = "riscv64") {
++            TargetArch::riscv64
++        } else if cfg!(target_arch = "loongarch64") {
++            TargetArch::loongarch64
+         } else {
+             unimplemented!("unsupported architecture for seccomp filter");
+         },
