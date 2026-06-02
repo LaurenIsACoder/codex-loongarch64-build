@@ -42,6 +42,20 @@ scripts/build-codex-loongarch64.sh
 scripts/package-release.sh
 ```
 
+## One-click system install
+
+Install the latest released package system-wide:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash
+```
+
+Install a specific release tag system-wide:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.135.0-loongarch64.1
+```
+
 ## Intended release assets
 
 Expected assets for `0.135.0`:

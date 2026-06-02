@@ -34,3 +34,12 @@ Expected runtime libraries include:
 ## Disclaimer
 
 This is an unofficial community-maintained build and is not an upstream OpenAI release.
+
+
+## Installation
+
+Install the latest release system-wide:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash
+```

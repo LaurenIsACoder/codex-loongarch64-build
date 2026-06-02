@@ -57,3 +57,11 @@
 4. `codex-package_SHA256SUMS`
 5. `SHA256SUMS`
 6. 可选元数据文件（`VERSION.txt`、`ldd.txt`）
+
+## 一键安装
+
+推荐公开给用户的安装命令：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash
+```

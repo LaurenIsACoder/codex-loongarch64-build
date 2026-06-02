@@ -59,3 +59,11 @@ Recommended patterns:
 4. `codex-package_SHA256SUMS`
 5. `SHA256SUMS`
 6. optional supporting metadata files (`VERSION.txt`, `ldd.txt`)
+
+## One-click install
+
+Recommended public install command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash
+```

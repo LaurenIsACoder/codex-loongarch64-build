@@ -39,6 +39,20 @@ scripts/build-codex-loongarch64.sh
 scripts/package-release.sh
 ```
 
+## 一键系统级安装
+
+安装最新发布版本：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash
+```
+
+安装指定 tag：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.135.0-loongarch64.1
+```
+
 ## 计划生成的发布资产
 
 本仓库会同时维护两类发行物：

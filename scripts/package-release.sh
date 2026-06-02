@@ -67,10 +67,12 @@ EOF2
 ldd "$CODEX_BIN" > "$RELEASE_DIR/ldd.txt"
 cp "$REPO_ROOT/README.md" "$RELEASE_DIR/README.md"
 cp "$REPO_ROOT/README.zh-CN.md" "$RELEASE_DIR/README.zh-CN.md"
+cp "$REPO_ROOT/scripts/install-system.sh" "$RELEASE_DIR/install-system.sh"
+chmod +x "$RELEASE_DIR/install-system.sh"
 
 (
   cd "$RELEASE_DIR"
-  sha256sum             "$TARGET_NAME"             "${TARGET_NAME}.tar.gz"             "${PACKAGE_NAME}.tar.gz"             README.md README.zh-CN.md VERSION.txt ldd.txt             > SHA256SUMS
+  sha256sum     "$TARGET_NAME"     "${TARGET_NAME}.tar.gz"     "${PACKAGE_NAME}.tar.gz"     README.md README.zh-CN.md VERSION.txt ldd.txt install-system.sh     > SHA256SUMS
   sha256sum "${PACKAGE_NAME}.tar.gz" > codex-package_SHA256SUMS
 )
 
