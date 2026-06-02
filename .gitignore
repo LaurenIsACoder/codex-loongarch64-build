@@ -3,3 +3,6 @@
 *.xz
 *.7z
 codex
+work/
+artifacts/v*/
+!artifacts/README.md

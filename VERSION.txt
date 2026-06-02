@@ -1,17 +1,20 @@
-codex version:
-codex-cli 0.0.0
+upstream release tag:
+rust-v0.135.0
 
-target:
+upstream cli version:
+codex-cli 0.135.0
+
+target triple:
 loongarch64-unknown-linux-gnu
 
-build machine:
-Linux loongson-pc 6.6.52-loong64 #1 SMP Debian 6.6.52-1.7 (2025-12-08) loongarch64 GNU/Linux
+rusty_v8:
+147.4.0
 
-rustc:
-rustc 1.95.0 (59807616e 2026-04-14)
+seccompiler:
+0.5.0 + loongarch64 patch
 
-build date:
-2026年 05月 25日 星期一 20:48:59 CST
+final linker strategy:
+clang + lld
 
-binary:
-codex
+status:
+successfully built and verified locally on 2026-06-02

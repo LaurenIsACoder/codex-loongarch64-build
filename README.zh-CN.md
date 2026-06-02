@@ -1,54 +1,81 @@
-# LoongArch64 Linux 版 Codex CLI
+# Codex LoongArch64 编译仓库
 
-这是一个面向 LoongArch64 Linux 的 Codex CLI 非官方社区构建版本。
+这个仓库的目标不是只保存一个已经编好的二进制，而是把
+LoongArch64 版本 Codex CLI 的**构建方法**和**分发方法**都沉淀下来。
 
-## 构建信息
+它主要解决两件事：
 
-- 软件包：Codex CLI
-- 版本：codex-cli 0.0.0
-- 目标架构：loongarch64-unknown-linux-gnu
-- 构建类型：非官方社区构建
-- 编译贡献者：Hanlu Li (@LaurenIsACoder)
+1. 让别人可以从上游源码稳定复现 LoongArch64 构建过程。
+2. 让我们可以像官方其他架构那样，生成更正式的发布资产，而不是只发一个裸二进制。
 
-## 贡献说明
+## 当前目标版本
 
-该构建版本作为 LoongArch64 Linux 社区构建版本提供。
+- 上游 release：`rust-v0.135.0`
+- CLI 版本：`codex-cli 0.135.0`
+- 目标架构：`loongarch64-unknown-linux-gnu`
+- V8 crate：`147.4.0`
+- 最终链接策略：`clang + lld`
 
-编译贡献者完成了 Codex CLI 在 LoongArch64 Linux 环境下的本地构建，包括适配 rusty_v8 / V8 v147.4.0 源码构建流程，并修复 Rust sysroot、bindgen、libclang、clang/lld、LoongArch64 链接器行为等相关构建问题。
+## 仓库结构
 
-主要贡献：
+- `docs/`
+  构建说明、发行说明、LoongArch64 相关坑位说明。
+- `patches/`
+  给上游 Codex、`seccompiler`、`rusty_v8` 使用的补丁。
+- `scripts/`
+  下载源码、打补丁、执行构建、生成发布资产的脚本。
+- `release/`
+  GitHub Release 说明模板与上传检查清单。
+- `artifacts/`
+  生成后的发布资产目录。该目录默认不进入 git 历史。
 
-- 在 loongarch64 Linux 环境下完成 Codex CLI 构建
-- 适配 rusty_v8 / V8 v147.4.0 在 loongarch64 上的源码构建流程
-- 修复 Rust sysroot 与 Chromium Rust toolchain 假设不匹配的问题
-- 将不兼容的预编译 bindgen/libclang 替换为本地 LoongArch64 可用工具链
-- 修复 clang/lld 与 LoongArch64 最终链接阶段相关问题
-- 产出可运行的 LoongArch64 Linux Codex CLI 二进制文件
-
-## 包内容
-
-- `codex` - Codex CLI 可执行文件
-- `README.md` - 英文说明文档
-- `README.zh-CN.md` - 中文说明文档
-- `VERSION.txt` - 构建与版本信息
-- `ldd.txt` - 构建机上的运行时动态库依赖列表
-- `SHA256SUMS` - SHA256 校验文件
-
-## 运行时依赖
-
-运行本包不需要安装 Rust、Cargo、LLVM、Ninja 或 V8 编译环境。
-
-但需要兼容的 LoongArch64 Linux 运行时环境。
-
-预期运行时依赖：
-
-- libc6
-- libgcc-s1
-- zlib1g
-- libssl3
-- libzstd1
-
-在 Debian / Loongnix 类系统上，可以尝试安装：
+## 快速开始
 
 ```bash
-sudo apt install -y libc6 libgcc-s1 zlib1g libssl3 libzstd1
+cd ~/AI/codex-loongarch64-build-repo
+scripts/fetch-sources.sh
+scripts/apply-patches.sh
+scripts/build-codex-loongarch64.sh
+scripts/package-release.sh
+```
+
+## 计划生成的发布资产
+
+本仓库会同时维护两类发行物：
+
+1. 裸二进制发行物
+2. 更接近官方形式的 package 发行物
+
+面向 `0.135.0` 的目标资产：
+
+- `codex-loongarch64-unknown-linux-gnu`
+- `codex-loongarch64-unknown-linux-gnu.tar.gz`
+- `codex-package-loongarch64-unknown-linux-gnu.tar.gz`
+- `codex-package_SHA256SUMS`
+- `SHA256SUMS`
+- `VERSION.txt`
+- `ldd.txt`
+
+其中：
+- 裸二进制资产的命名风格尽量贴近官方 release
+- package 资产使用标准目录布局：`bin/`、`codex-resources/`、`codex-path/`、`codex-package.json`
+
+## 为什么需要这个仓库
+
+官方 Codex 目前会发布 `x86_64` 和 `aarch64` 的 Linux 资产，但不会发布
+`loongarch64`。这导致我们在 LoongArch64 上至少要自己解决四类问题：
+
+- 上游 `codex-rs` 默认版本号与 Linux sandbox 目标分支问题
+- `seccompiler` 缺少 `loongarch64` 支持
+- `rusty_v8` / Chromium Rust toolchain 的源码构建假设不适配 LoongArch64
+- 最终大二进制链接时，GNU `ld` 在 LoongArch64 上发生重定位溢出，需要改走 `lld`
+
+这些内容已经在本仓库里整理成脚本、补丁和说明，目标是让后续版本继续可维护。
+
+## 当前状态
+
+- 版本与目标信息见 [VERSION.txt](./VERSION.txt)
+- 构建方法见 [docs/build.zh-CN.md](./docs/build.zh-CN.md)
+- 发行方法见 [docs/release.zh-CN.md](./docs/release.zh-CN.md)
+
+英文说明见 [README.md](./README.md)。
