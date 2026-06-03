@@ -10,6 +10,8 @@ FORCE=${CODEX_FORCE_INSTALL:-0}
 PACKAGE_ASSET=codex-package-loongarch64-unknown-linux-gnu.tar.gz
 CHECKSUM_ASSET=codex-package_SHA256SUMS
 
+tmp_dir=""
+
 step() {
   printf '==> %s
 ' "$1"
@@ -125,6 +127,12 @@ download_asset() {
   curl -fL "https://github.com/$REPO_SLUG/releases/download/$tag/$asset" -o "$out"
 }
 
+cleanup() {
+  if [[ -n "${tmp_dir:-}" && -d "$tmp_dir" ]]; then
+    rm -rf "$tmp_dir"
+  fi
+}
+
 main() {
   parse_args "$@"
   require_root
@@ -135,12 +143,12 @@ main() {
   require_cmd ln
   require_cmd install
 
-  local tag release_dir current_link tmp_dir
+  local tag release_dir current_link
   tag=$(release_tag)
   release_dir="$INSTALL_ROOT/releases/$tag"
   current_link="$INSTALL_ROOT/current"
   tmp_dir=$(mktemp -d)
-  trap 'rm -rf "$tmp_dir"' EXIT
+  trap cleanup EXIT
 
   step "Installing Codex LoongArch64 release $tag"
   step "Downloading release assets"
