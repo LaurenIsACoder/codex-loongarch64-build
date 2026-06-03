@@ -3,6 +3,10 @@
 这个仓库的目标不是只保存一个已经编好的二进制，而是把
 LoongArch64 版本 Codex CLI 的**构建方法**和**分发方法**都沉淀下来。
 
+项目仓库：
+
+- https://github.com/LaurenIsACoder/codex-loongarch64-build
+
 它主要解决两件事：
 
 1. 让别人可以从上游源码稳定复现 LoongArch64 构建过程。
@@ -32,7 +36,7 @@ LoongArch64 版本 Codex CLI 的**构建方法**和**分发方法**都沉淀下�
 ## 快速开始
 
 ```bash
-cd ~/AI/codex-loongarch64-build-repo
+cd <your-clone-dir>/codex-loongarch64-build-repo
 scripts/fetch-sources.sh
 scripts/apply-patches.sh
 scripts/build-codex-loongarch64.sh

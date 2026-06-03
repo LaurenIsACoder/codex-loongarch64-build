@@ -27,8 +27,9 @@ PATCH_CODEX=$REPO_ROOT/patches/openai-codex/0.135.0/0001-codex-0.135.0-version-a
 PATCH_SECCOMPILER=$REPO_ROOT/patches/seccompiler/0.5.0/0001-seccompiler-0.5.0-add-loongarch64.patch
 PATCH_RUSTY_V8=$REPO_ROOT/patches/rusty_v8/147.4.0/0001-rusty-v8-147.4.0-loongarch-clang19-compat.patch
 
-NODE_BIN_DIR=${NODE_BIN_DIR:-/home/loongson/AI/node/node-v22.22.1-linux-loong64/bin}
-NIGHTLY_SYSROOT=${NIGHTLY_SYSROOT:-/home/loongson/.rustup/toolchains/nightly-2026-05-06-loongarch64-unknown-linux-gnu}
+NODE_BIN_DIR=${NODE_BIN_DIR:-}
+NIGHTLY_TOOLCHAIN=${NIGHTLY_TOOLCHAIN:-nightly-2026-05-06-loongarch64-unknown-linux-gnu}
+NIGHTLY_SYSROOT=${NIGHTLY_SYSROOT:-}
 LIBCLANG_PATH=${LIBCLANG_PATH:-/usr/lib/llvm-19/lib}
 CLANG_BASE_PATH=${CLANG_BASE_PATH:-/usr}
 TOOLCHAIN_OVERRIDE_DIR=${TOOLCHAIN_OVERRIDE_DIR:-$WORK_ROOT/toolchain-overrides/bin}
@@ -50,10 +51,28 @@ ensure_dirs() {
   mkdir -p "$SRC_ROOT" "$CACHE_ROOT" "$BUILD_ROOT" "$ARTIFACTS_ROOT" "$TOOLCHAIN_OVERRIDE_DIR"
 }
 
+resolve_nightly_sysroot() {
+  if [[ -n "${NIGHTLY_SYSROOT:-}" ]]; then
+    printf '%s\n' "$NIGHTLY_SYSROOT"
+    return
+  fi
+
+  require_cmd rustup
+  local rustc_path
+  rustc_path="$(rustup which --toolchain "$NIGHTLY_TOOLCHAIN" rustc 2>/dev/null || true)"
+  [[ -n "$rustc_path" ]] || {
+    echo "unable to resolve nightly rust toolchain: $NIGHTLY_TOOLCHAIN" >&2
+    echo "set NIGHTLY_SYSROOT explicitly or install the toolchain with rustup" >&2
+    exit 1
+  }
+  printf '%s\n' "$(cd "$(dirname "$rustc_path")/.." && pwd)"
+}
+
 nightly_rustc_version_id() {
-  local ver hash
-  ver="$($NIGHTLY_SYSROOT/bin/rustc --version | awk 'NR==1{print $2}')"
-  hash="$($NIGHTLY_SYSROOT/bin/rustc --version | awk 'NR==1{gsub(/[()]/, "", $3); print $3}')"
+  local sysroot ver hash
+  sysroot="$(resolve_nightly_sysroot)"
+  ver="$($sysroot/bin/rustc --version | awk 'NR==1{print $2}')"
+  hash="$($sysroot/bin/rustc --version | awk 'NR==1{gsub(/[()]/, "", $3); print $3}')"
   printf '%s-%s\n' "$ver" "$hash"
 }
 

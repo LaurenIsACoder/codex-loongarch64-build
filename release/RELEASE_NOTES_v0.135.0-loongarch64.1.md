@@ -4,6 +4,10 @@ Upstream Codex version: `0.135.0`
 Release tag: `v0.135.0-loongarch64.1`  
 Target: `loongarch64-unknown-linux-gnu`
 
+Project repository:
+
+- https://github.com/LaurenIsACoder/codex-loongarch64-build
+
 ## English
 
 This is an unofficial community build of Codex CLI for LoongArch64 Linux.

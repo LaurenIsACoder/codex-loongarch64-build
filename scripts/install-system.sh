@@ -189,6 +189,9 @@ Installed system-wide:
 You can now run:
   codex --version
   codex
+
+Project repository:
+  https://github.com/LaurenIsACoder/codex-loongarch64-build
 EOF
 }
 

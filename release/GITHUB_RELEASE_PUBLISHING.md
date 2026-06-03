@@ -15,7 +15,7 @@ Artifacts directory:
 ## 1. Push commits and tag
 
 ```bash
-cd ~/AI/codex-loongarch64-build-repo
+cd <your-clone-dir>/codex-loongarch64-build-repo
 git push origin main
 git push origin v0.135.0-loongarch64.1
 ```

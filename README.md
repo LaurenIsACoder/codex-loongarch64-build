@@ -3,6 +3,10 @@
 This repository is a maintainable build-and-release workspace for an unofficial
 LoongArch64 Linux port of OpenAI Codex CLI.
 
+Project repository:
+
+- https://github.com/LaurenIsACoder/codex-loongarch64-build
+
 It is designed to solve two separate problems:
 
 1. Reproduce the LoongArch64 build from upstream source, including the V8 and
@@ -35,7 +39,7 @@ It is designed to solve two separate problems:
 ## Quick start
 
 ```bash
-cd ~/AI/codex-loongarch64-build-repo
+cd <your-clone-dir>/codex-loongarch64-build-repo
 scripts/fetch-sources.sh
 scripts/apply-patches.sh
 scripts/build-codex-loongarch64.sh

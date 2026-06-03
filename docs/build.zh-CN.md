@@ -75,3 +75,25 @@
 - `work/build/target-codex-0.135.0/release/codex`
 
 脚本成功后会打印最终路径。
+
+## 环境变量覆盖
+
+脚本默认尽量避免写死本机绝对路径。
+
+默认行为：
+
+- `node` 从当前 `PATH` 中获取
+- `rusty_v8` 使用的 nightly sysroot 通过 `rustup` 和 `NIGHTLY_TOOLCHAIN` 自动解析
+
+可选覆盖：
+
+- `NODE_BIN_DIR`：当 Node 22 不在 `PATH` 中时使用
+- `NIGHTLY_TOOLCHAIN`：如果你要改用别的 nightly 工具链名
+- `NIGHTLY_SYSROOT`：如果你想完全绕过 `rustup` 自动解析
+
+示例：
+
+```bash
+export NODE_BIN_DIR=/opt/node-v22/bin
+export NIGHTLY_TOOLCHAIN=nightly-2026-05-06-loongarch64-unknown-linux-gnu
+```

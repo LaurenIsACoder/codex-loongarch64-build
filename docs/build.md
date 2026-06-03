@@ -79,3 +79,25 @@ Primary output:
 - `work/build/target-codex-0.135.0/release/codex`
 
 The script prints the final path after a successful build.
+
+## Environment overrides
+
+The scripts are written to avoid machine-specific absolute paths by default.
+
+Expected behavior:
+
+- `node` is taken from your current `PATH`
+- the nightly sysroot for `rusty_v8` is resolved with `rustup` from `NIGHTLY_TOOLCHAIN`
+
+Optional overrides:
+
+- `NODE_BIN_DIR` if your Node 22 binary is not already on `PATH`
+- `NIGHTLY_TOOLCHAIN` if you want to use a different nightly toolchain name
+- `NIGHTLY_SYSROOT` if you want to bypass `rustup` resolution entirely
+
+Example:
+
+```bash
+export NODE_BIN_DIR=/opt/node-v22/bin
+export NIGHTLY_TOOLCHAIN=nightly-2026-05-06-loongarch64-unknown-linux-gnu
+```

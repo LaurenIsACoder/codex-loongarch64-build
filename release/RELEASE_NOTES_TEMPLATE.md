@@ -3,6 +3,10 @@
 Upstream Codex version: `0.135.0`
 Target: `loongarch64-unknown-linux-gnu`
 
+Project repository:
+
+- https://github.com/LaurenIsACoder/codex-loongarch64-build
+
 ## Highlights
 
 - Community build for LoongArch64 Linux
