@@ -1,5 +1,5 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: LoongArch64 Community Build <loongson@loongarch64.local>
+From: LoongArch64 Community Build <codex-loongarch64-build@community>
 Date: Tue, 17 Jun 2026 00:00:00 +0800
 Subject: [PATCH] rusty-v8-149.2.0: loongarch64 Clang 19 compatibility fixes
 

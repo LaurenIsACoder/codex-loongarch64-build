@@ -9,7 +9,6 @@ RUSTY_V8_VERSION=${RUSTY_V8_VERSION:-149.2.0}
 SECCOMPILER_VERSION=${SECCOMPILER_VERSION:-0.5.0}
 TARGET_TRIPLE=${TARGET_TRIPLE:-loongarch64-unknown-linux-gnu}
 
-CODEX_GIT=${CODEX_GIT:-$HOME/AI/codex}
 CODEX_TARBALL_URL=${CODEX_TARBALL_URL:-https://github.com/openai/codex/archive/refs/tags/${CODEX_TAG}.tar.gz}
 RUSTY_V8_GIT_URL=${RUSTY_V8_GIT_URL:-https://github.com/denoland/rusty_v8.git}
 SECCOMPILER_CRATE_URL=${SECCOMPILER_CRATE_URL:-https://crates.io/api/v1/crates/seccompiler/${SECCOMPILER_VERSION}/download}
