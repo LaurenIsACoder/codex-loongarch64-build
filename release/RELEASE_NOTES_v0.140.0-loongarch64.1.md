@@ -30,7 +30,8 @@ Built from upstream `openai/codex` release source:
 
 ### Highlights
 
-- **Installer now supports `--proxy` for firewalled environments**
+- **Installer now auto-detects proxy settings** (reads `http_proxy`/
+  `https_proxy` from your shell even after `sudo` strips environment)
 - Upgraded to upstream `codex-cli 0.140.0`
 - `rusty_v8` upgraded to `v149.2.0` with updated LoongArch64 patches
 - Medium code model (`-C code-model=medium`) avoids B26 relocation overflow
@@ -131,12 +132,6 @@ Install the latest release system-wide:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash
-```
-
-Install behind a proxy:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo -E bash -s -- --proxy http://your-proxy:8080
 ```
 
 Install this exact release tag:

@@ -92,18 +92,12 @@ Options:
   --install-root DIR  Installation directory (default: /opt/codex-loongarch64)
   --bin-link PATH     Symlink path for the codex command (default: /usr/local/bin/codex)
   --repo OWNER/REPO   GitHub repository slug (default: LaurenIsACoder/codex-loongarch64-build)
-  --proxy URL         HTTP(S) proxy for curl, e.g. http://proxy:8080
+  --proxy URL         HTTP(S) proxy for curl (optional: auto-detected)
   --force             Overwrite existing installation
-
-Note on proxy:
-  When running behind a firewall, use --proxy to pass proxy settings.
-  Environment variables (http_proxy, https_proxy, all_proxy) are also
-  respected if preserved via sudo -E or configured in sudoers.
 
 Examples:
   curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash
   curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.140.0-loongarch64.1
-  curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo -E bash -s -- --proxy http://proxy:8080
 EOF
         exit 0
         ;;
@@ -128,13 +122,32 @@ resolve_proxy() {
     printf '%s' "$PROXY"
     return
   fi
-  # Fall back to environment variables (may not survive sudo without -E).
+  # Check current environment (works with sudo -E or env_keep).
   if [[ -n "${https_proxy:-}" ]]; then
     printf '%s' "$https_proxy"
-  elif [[ -n "${http_proxy:-}" ]]; then
+    return
+  fi
+  if [[ -n "${http_proxy:-}" ]]; then
     printf '%s' "$http_proxy"
-  elif [[ -n "${all_proxy:-}" ]]; then
+    return
+  fi
+  if [[ -n "${all_proxy:-}" ]]; then
     printf '%s' "$all_proxy"
+    return
+  fi
+  # Running under sudo: environment is stripped. Walk up to the user's
+  # original shell via /proc and read its proxy env vars directly.
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    local user_shell_pid user_proxy
+    user_shell_pid=$(awk '/^PPid:/{print $2}' /proc/$PPID/status 2>/dev/null)
+    if [[ -n "$user_shell_pid" ]] && [[ -r "/proc/$user_shell_pid/environ" ]]; then
+      user_proxy=$(tr '\0' '\n' < "/proc/$user_shell_pid/environ" 2>/dev/null \
+        | grep -E '^(https?_proxy|all_proxy)=' | head -1 | cut -d= -f2-)
+      if [[ -n "$user_proxy" ]]; then
+        printf '%s' "$user_proxy"
+        return
+      fi
+    fi
   fi
 }
 
