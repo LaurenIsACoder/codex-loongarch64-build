@@ -3,7 +3,7 @@
 ## Scope
 
 This guide documents the reproducible LoongArch64 source build for Codex CLI
-`0.135.0`.
+`0.140.0` (and serves as a template for future versions).
 
 ## What is different from official Linux builds
 
@@ -62,21 +62,23 @@ Known-good local assumptions used during the successful build:
 
 ## Key pitfalls that this repo handles
 
-- Upstream release source defaults to `0.0.0` unless the workspace version is
-  patched.
 - `seccompiler 0.5.0` does not support `loongarch64` out of the box.
 - `rusty_v8` prebuilt artifacts for LoongArch64 are unavailable.
 - crates.io `v8` source tarball is insufficient for this source-build path;
   the Git checkout is required.
-- Chromium Rust and Clang assumptions require local compatibility adjustments.
+- `rusty_v8` ships x86_64 rust-toolchain binaries that must be replaced with
+  native LoongArch64 equivalents before building.
+- Chromium Rust and Clang assumptions require local compatibility adjustments
+  (BUILD.gn, sanitizers.gni).
 - The final Codex binary can overflow GNU `ld` relocations on LoongArch64.
-  This repo therefore uses `clang` with `-fuse-ld=lld` for the final link.
+  The build now uses medium code model (`-C code-model=medium`) by default
+  and falls back to `clang` with `-fuse-ld=lld` if the direct build fails.
 
 ## Expected build output
 
 Primary output:
 
-- `work/build/target-codex-0.135.0/release/codex`
+- `work/build/target-codex-0.140.0/release/codex`
 
 The script prints the final path after a successful build.
 
