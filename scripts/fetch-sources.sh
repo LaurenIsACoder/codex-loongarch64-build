@@ -24,6 +24,26 @@ if [[ ! -d "$RUSTY_V8_DIR/.git" ]]; then
   git clone --branch "v${RUSTY_V8_VERSION}" --depth 1 "$RUSTY_V8_GIT_URL" "$RUSTY_V8_DIR"
 fi
 
+if [[ -d "$RUSTY_V8_DIR/.git" ]]; then
+  log "Initialising rusty_v8 submodules"
+  cd "$RUSTY_V8_DIR"
+  local submodules=(
+    build buildtools v8
+    third_party/icu third_party/abseil-cpp
+    third_party/libc++/src third_party/libc++abi/src third_party/libunwind/src
+    third_party/fp16/src third_party/highway/src third_party/dragonbox/src
+    third_party/fast_float/src third_party/simdutf third_party/rust
+    third_party/jinja2 third_party/markupsafe third_party/partition_alloc
+    third_party/llvm-libc/src
+  )
+  for sm in "${submodules[@]}"; do
+    if [[ ! -f "$sm/.git" ]] && [[ ! -d "$sm/.git" ]]; then
+      git submodule update --init --depth 1 "$sm" 2>/dev/null || true
+    fi
+  done
+  cd "$REPO_ROOT"
+fi
+
 seccompiler_tarball="$CACHE_ROOT/seccompiler-${SECCOMPILER_VERSION}.tar.gz"
 if [[ ! -f "$seccompiler_tarball" ]]; then
   log "Downloading seccompiler ${SECCOMPILER_VERSION} crate"

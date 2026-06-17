@@ -1,23 +1,27 @@
 upstream release tag:
-rust-v0.135.0
+rust-v0.140.0
 
 upstream cli version:
-codex-cli 0.135.0
+codex-cli 0.140.0
 
 target triple:
 loongarch64-unknown-linux-gnu
 
 rusty_v8:
-147.4.0
+149.2.0
 
 seccompiler:
 0.5.0 + loongarch64 patch
 
 final linker strategy:
-clang + lld
+clang + lld (fallback)
+medium code model (default)
 
 status:
-successfully built and verified locally on 2026-06-02
+built and verified locally on 2026-06-18
+
+previous releases:
+0.135.0 (2026-06-02)
 
 repository:
 https://github.com/LaurenIsACoder/codex-loongarch64-build
