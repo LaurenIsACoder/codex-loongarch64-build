@@ -1,0 +1,75 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LoongArch64 Community Build <loongson@loongarch64.local>
+Date: Tue, 17 Jun 2026 00:00:00 +0800
+Subject: [PATCH] rusty-v8-149.2.0: loongarch64 Clang 19 compatibility fixes
+
+Two changes to support building V8 from source on LoongArch64 Linux
+with system Clang 19:
+
+1. BUILD.gn: skip Clang flags unsupported on loong64
+   - -fdiagnostics-show-inlining-chain (not supported on loongarch64)
+   - -fno-lifetime-dse (not supported on loongarch64)
+
+2. sanitizers.gni: gate -fsanitize-ignore-for-ubsan-feature behind
+   current_cpu != "loong64", because the flag is not recognised by
+   Clang when targeting loongarch64.
+
+---
+ build/config/compiler/BUILD.gn        |  4 +++-
+ build/config/sanitizers/sanitizers.gni | 12 ++++++++----
+ 2 files changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+index 1111111..2222222 100644
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -600,8 +600,10 @@
+   if (is_clang) {
+     # Flags for diagnostics.
+     cflags += [ "-fcolor-diagnostics" ]
+-    if (!is_win) {
++    if (!is_win && current_cpu != "loong64") {
+       cflags += [ "-fdiagnostics-show-inlining-chain" ]
++    } else if (!is_win) {
++      # loong64: skip unsupported flag
+     } else {
+       # Combine after https://github.com/llvm/llvm-project/pull/192241
+       cflags += [ "/clang:-fdiagnostics-show-inlining-chain" ]
+@@ -639,7 +641,7 @@
+     # The performance improvement does not seem worth the risk. See
+     # https://crbug.com/484082200 for background and https://crrev.com/c/7593035
+     # for discussion.
+-    if (!is_wasm) {
++    if (!is_wasm && current_cpu != "loong64") {
+       cflags += [ "-fno-lifetime-dse" ]
+     }
+ 
+diff --git a/build/config/sanitizers/sanitizers.gni b/build/config/sanitizers/sanitizers.gni
+index 1111111..2222222 100644
+--- a/build/config/sanitizers/sanitizers.gni
++++ b/build/config/sanitizers/sanitizers.gni
+@@ -534,14 +534,17 @@
+       cflags = [
+         "-fsanitize=${invoker.sanitizer}",
+         "-fsanitize-trap=${invoker.sanitizer}",
+-
+-        # Prevents `__has_feature(undefined_behavior_sanitizer)`
+-        # from evaluating true. Configs defined here are intended to
+-        # be usable even in release builds, i.e. as widely as possible.
+-        # It's important not to have full-on UBSan workarounds activate
+-        # just because we built support for a specific sanitizer.
+-        "-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",
+       ]
++      if (current_cpu != "loong64") {
++        cflags += [
++          # Prevents `__has_feature(undefined_behavior_sanitizer)`
++          # from evaluating true. Configs defined here are intended to
++          # be usable even in release builds, i.e. as widely as possible.
++          # It's important not to have full-on UBSan workarounds activate
++          # just because we built support for a specific sanitizer.
++          "-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",
++        ]
++      }
+       if (defined(invoker.cflags)) {
+         cflags += invoker.cflags
+       }

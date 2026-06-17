@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LoongArch64 Community Build <loongson@loongarch64.local>
+Date: Tue, 17 Jun 2026 00:00:00 +0800
+Subject: [PATCH] codex-0.140.0: add loongarch64 and riscv64 landlock target arch
+
+Add loongarch64 and riscv64 to the seccomp target-arch selection in
+linux-sandbox/src/landlock.rs, so that the seccomp filter can be
+constructed on these architectures.
+
+Without this patch, the `unimplemented!()` panic prevents the Linux
+sandbox from initialising on LoongArch64 (and future riscv64) hosts.
+
+Note: riscv64 is included defensively even though the primary target
+is loongarch64; it will become a no-op once upstream adds riscv64
+support independently.
+
+---
+ codex-rs/linux-sandbox/src/landlock.rs | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/codex-rs/linux-sandbox/src/landlock.rs b/codex-rs/linux-sandbox/src/landlock.rs
+index 1111111..2222222 100644
+--- a/codex-rs/linux-sandbox/src/landlock.rs
++++ b/codex-rs/linux-sandbox/src/landlock.rs
+@@ -254,6 +254,14 @@
+             TargetArch::x86_64
+         } else if cfg!(target_arch = "aarch64") {
+             TargetArch::aarch64
++        } else if cfg!(target_arch = "riscv64") {
++            TargetArch::riscv64
++        } else if cfg!(target_arch = "loongarch64") {
++            TargetArch::loongarch64
+         } else {
+             unimplemented!("unsupported architecture for seccomp filter");
+         },
