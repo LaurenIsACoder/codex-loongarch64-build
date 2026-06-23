@@ -1,8 +1,8 @@
 upstream release tag:
-rust-v0.140.0
+rust-v0.142.0
 
 upstream cli version:
-codex-cli 0.140.0
+codex-cli 0.142.0
 
 target triple:
 loongarch64-unknown-linux-gnu
@@ -18,9 +18,10 @@ clang + lld (fallback)
 medium code model (default)
 
 status:
-built and verified locally on 2026-06-18
+built and verified locally on 2026-06-23
 
 previous releases:
+0.140.0 (2026-06-18)
 0.135.0 (2026-06-02)
 
 repository:
