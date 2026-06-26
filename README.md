@@ -16,8 +16,8 @@ It is designed to solve two separate problems:
 
 ## Current target
 
-- Upstream release: `rust-v0.142.0`
-- CLI version: `codex-cli 0.142.0`
+- Upstream release: `rust-v0.142.2`
+- CLI version: `codex-cli 0.142.2`
 - Architecture: `loongarch64-unknown-linux-gnu`
 - V8 crate: `149.2.0`
 - Code model: `medium` (`-C code-model=medium`)
@@ -58,10 +58,14 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 Install a specific release tag system-wide:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.142.0-loongarch64.1
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.142.2-loongarch64.1
 ```
 
 ## Previous releases
+
+### v0.142.2
+
+See [release/RELEASE_NOTES_v0.142.2-loongarch64.1.md](release/RELEASE_NOTES_v0.142.2-loongarch64.1.md).
 
 ### v0.142.0
 
@@ -77,7 +81,7 @@ See [release/RELEASE_NOTES_v0.135.0-loongarch64.1.md](release/RELEASE_NOTES_v0.1
 
 ## Intended release assets
 
-Expected assets for `0.142.0`:
+Expected assets for `0.142.2`:
 
 - `codex-loongarch64-unknown-linux-gnu`
 - `codex-loongarch64-unknown-linux-gnu.tar.gz`
