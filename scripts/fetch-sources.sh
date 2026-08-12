@@ -27,8 +27,8 @@ fi
 if [[ -d "$RUSTY_V8_DIR/.git" ]]; then
   log "Initialising rusty_v8 submodules"
   cd "$RUSTY_V8_DIR"
-  local submodules=(
-    build buildtools v8
+  submodules=(
+    build buildtools v8 tools/clang
     third_party/icu third_party/abseil-cpp
     third_party/libc++/src third_party/libc++abi/src third_party/libunwind/src
     third_party/fp16/src third_party/highway/src third_party/dragonbox/src
@@ -37,8 +37,12 @@ if [[ -d "$RUSTY_V8_DIR/.git" ]]; then
     third_party/llvm-libc/src
   )
   for sm in "${submodules[@]}"; do
-    if [[ ! -f "$sm/.git" ]] && [[ ! -d "$sm/.git" ]]; then
-      git submodule update --init --depth 1 "$sm" 2>/dev/null || true
+    if [[ ! -e "$sm/.codex-source-ready" ]] && \
+       [[ ! -f "$sm/.git" ]] && [[ ! -d "$sm/.git" ]]; then
+      if ! git submodule update --init --depth 1 "$sm"; then
+        log "Retrying full submodule fetch: $sm"
+        git submodule update --init "$sm"
+      fi
     fi
   done
   cd "$REPO_ROOT"
@@ -56,7 +60,35 @@ if [[ ! -d "$SECCOMPILER_SRC_DIR" ]]; then
   tar -xzf "$seccompiler_tarball" --strip-components=1 -C "$SECCOMPILER_SRC_DIR"
 fi
 
+ensure_git_dependency() {
+  local path=$1 url=$2 revision=$3
+  if [[ -e "$path/.codex-source-ready" ]]; then
+    return
+  fi
+  if [[ ! -d "$path/.git" ]]; then
+    git clone --filter=blob:none --no-checkout "$url" "$path"
+  fi
+  git -C "$path" checkout --detach "$revision"
+}
+
+ensure_git_dependency "$CROSSTERM_SRC_DIR" \
+  https://github.com/openai-oss-forks/crossterm \
+  f69a4a0499f2fdc7d5d222df32373ffffe9ba3f5
+ensure_git_dependency "$NUCLEO_SRC_DIR" \
+  https://github.com/helix-editor/nucleo.git \
+  4253de9faabb4e5c6d81d946a5e35a90f87347ee
+ensure_git_dependency "$RULES_RUST_SRC_DIR" \
+  https://github.com/dzbarsky/rules_rust \
+  b56cbaa8465e74127f1ea216f813cd377295ad81
+ensure_git_dependency "$TOKIO_TUNGSTENITE_SRC_DIR" \
+  https://github.com/openai-oss-forks/tokio-tungstenite \
+  0e5b2d73aa18dd9f0a50ee9ff199d5aef7594186
+ensure_git_dependency "$TUNGSTENITE_SRC_DIR" \
+  https://github.com/openai-oss-forks/tungstenite-rs \
+  4fffad30fe373adbdcffab9545e9e9bf4f2fc19f
+
 log "Sources ready"
 log "  Codex:       $CODEX_SRC_DIR"
 log "  rusty_v8:    $RUSTY_V8_DIR"
 log "  seccompiler: $SECCOMPILER_SRC_DIR"
+log "  git deps:    $GIT_DEPS_ROOT"

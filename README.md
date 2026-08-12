@@ -16,12 +16,16 @@ It is designed to solve two separate problems:
 
 ## Current target
 
-- Upstream release: `rust-v0.144.1`
-- CLI version: `codex-cli 0.144.1`
-- Architecture: `loongarch64-unknown-linux-gnu`
-- V8 crate: `149.2.0`
+- Upstream release: `rust-v0.147.0`
+- CLI version: `codex-cli 0.147.0`
+- Architecture: `loongarch64-unknown-linux-musl`
+- V8 crate: `150.4.0`
 - Code model: `medium` (`-C code-model=medium`)
-- Final binary linker strategy: direct build, `clang + lld` fallback
+- Final binary linker strategy: local `clang + lld`, static musl
+
+Codex CLI `0.147.0` does not link the workspace's standalone `codex-v8-poc`
+crate. The `rusty_v8 150.4.0` source and patch set are retained for that
+optional workspace component; they are not part of the default CLI binary.
 
 ## Repository layout
 
@@ -41,11 +45,18 @@ It is designed to solve two separate problems:
 
 ```bash
 cd <your-clone-dir>/codex-loongarch64-build-repo
+scripts/setup-local-toolchains.sh
 scripts/fetch-sources.sh
 scripts/apply-patches.sh
 scripts/build-codex-loongarch64.sh
+scripts/build-ripgrep-loongarch64.sh
 scripts/package-release.sh
 ```
+
+The setup script downloads and extracts its compiler, musl sysroot, Rust,
+Node.js, GN, Ninja, and native libraries below this repository's ignored
+`toolchains/` directory. It does not install packages or replace files in
+system directories.
 
 ## One-click system install
 
@@ -58,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 Install a specific release tag system-wide:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.144.1-loongarch64.1
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.147.0-loongarch64-musl.1
 ```
 
 ## Previous releases
@@ -85,11 +96,11 @@ See [release/RELEASE_NOTES_v0.135.0-loongarch64.1.md](release/RELEASE_NOTES_v0.1
 
 ## Intended release assets
 
-Expected assets for `0.144.1`:
+Expected assets for `0.147.0`:
 
-- `codex-loongarch64-unknown-linux-gnu`
-- `codex-loongarch64-unknown-linux-gnu.tar.gz`
-- `codex-package-loongarch64-unknown-linux-gnu.tar.gz`
+- `codex-loongarch64-unknown-linux-musl`
+- `codex-loongarch64-unknown-linux-musl.tar.gz`
+- `codex-package-loongarch64-unknown-linux-musl.tar.gz`
 - `codex-package_SHA256SUMS`
 - `SHA256SUMS`
 - `VERSION.txt`
@@ -108,12 +119,15 @@ places:
 - upstream `codex-rs` version metadata and Linux sandbox target selection
 - `seccompiler` support for `loongarch64`
 - `rusty_v8` source-build path and Chromium Rust/toolchain assumptions
-- final binary linking on LoongArch64, where GNU `ld` overflowed and `lld`
-  became necessary
+- fully static musl linking on LoongArch64 with a local sysroot and `lld`
 
 Those changes are documented and packaged here so future builds are repeatable.
 
 ## Current status
+
+The `0.147.0` static-musl Codex, bubblewrap, and ripgrep executables were built
+and run natively on LoongArch64 on 2026-08-12. Release packaging rejects
+dynamic executables before creating archives.
 
 See [VERSION.txt](./VERSION.txt) for the build target metadata and
 [docs/build.md](./docs/build.md) plus [docs/release.md](./docs/release.md) for

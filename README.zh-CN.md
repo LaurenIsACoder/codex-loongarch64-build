@@ -14,11 +14,16 @@ LoongArch64 版本 Codex CLI 的**构建方法**和**分发方法**都沉淀下�
 
 ## 当前目标版本
 
-- 上游 release：`rust-v0.135.0`
-- CLI 版本：`codex-cli 0.135.0`
-- 目标架构：`loongarch64-unknown-linux-gnu`
-- V8 crate：`147.4.0`
-- 最终链接策略：`clang + lld`
+- 上游 release：`rust-v0.147.0`
+- CLI 版本：`codex-cli 0.147.0`
+- 目标架构：`loongarch64-unknown-linux-musl`
+- V8 crate：`150.4.0`
+- 代码模型：`medium`（`-C code-model=medium`）
+- 最终链接策略：本地 `clang + lld`，静态 musl
+
+Codex CLI `0.147.0` 并不链接工作区中独立的 `codex-v8-poc`
+crate。本仓库仍保留 `rusty_v8 150.4.0` 源码和补丁，供这个可选
+工作区组件使用；它不会进入默认 CLI 二进制。
 
 ## 仓库结构
 
@@ -37,11 +42,17 @@ LoongArch64 版本 Codex CLI 的**构建方法**和**分发方法**都沉淀下�
 
 ```bash
 cd <your-clone-dir>/codex-loongarch64-build-repo
+scripts/setup-local-toolchains.sh
 scripts/fetch-sources.sh
 scripts/apply-patches.sh
 scripts/build-codex-loongarch64.sh
+scripts/build-ripgrep-loongarch64.sh
 scripts/package-release.sh
 ```
+
+工具链初始化脚本只会在仓库内被 git 忽略的 `toolchains/` 目录下载、
+解包和编译所需组件，包括 Clang、musl sysroot、Rust、Node.js、GN、
+Ninja 和本地原生库；不会安装系统包或覆盖系统目录中的文件。
 
 ## 一键系统级安装
 
@@ -54,7 +65,7 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 安装指定 tag：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.135.0-loongarch64.1
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.147.0-loongarch64-musl.1
 ```
 
 ## 计划生成的发布资产
@@ -64,11 +75,11 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 1. 裸二进制发行物
 2. 更接近官方形式的 package 发行物
 
-面向 `0.135.0` 的目标资产：
+面向 `0.147.0` 的目标资产：
 
-- `codex-loongarch64-unknown-linux-gnu`
-- `codex-loongarch64-unknown-linux-gnu.tar.gz`
-- `codex-package-loongarch64-unknown-linux-gnu.tar.gz`
+- `codex-loongarch64-unknown-linux-musl`
+- `codex-loongarch64-unknown-linux-musl.tar.gz`
+- `codex-package-loongarch64-unknown-linux-musl.tar.gz`
 - `codex-package_SHA256SUMS`
 - `SHA256SUMS`
 - `VERSION.txt`
@@ -86,12 +97,15 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 - 上游 `codex-rs` 默认版本号与 Linux sandbox 目标分支问题
 - `seccompiler` 缺少 `loongarch64` 支持
 - `rusty_v8` / Chromium Rust toolchain 的源码构建假设不适配 LoongArch64
-- 最终大二进制链接时，GNU `ld` 在 LoongArch64 上发生重定位溢出，需要改走 `lld`
+- 在不使用系统 musl 的前提下，用本地 sysroot 和 `lld` 完成全静态 musl 链接
 
 这些内容已经在本仓库里整理成脚本、补丁和说明，目标是让后续版本继续可维护。
 
 ## 当前状态
 
+- `0.147.0` 的静态 musl Codex、bubblewrap 和 ripgrep 已于 2026-08-12
+  在原生 LoongArch64 上完成构建和运行验证。
+- 打包脚本会先拒绝任何含 ELF interpreter 或动态 `NEEDED` 依赖的二进制。
 - 版本与目标信息见 [VERSION.txt](./VERSION.txt)
 - 构建方法见 [docs/build.zh-CN.md](./docs/build.zh-CN.md)
 - 发行方法见 [docs/release.zh-CN.md](./docs/release.zh-CN.md)
