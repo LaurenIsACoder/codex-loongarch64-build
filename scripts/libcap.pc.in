@@ -1,0 +1,10 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: libcap
+Description: Linux capabilities
+Version: 2.75
+Libs: -L${libdir} -lcap
+Cflags: -I${includedir}

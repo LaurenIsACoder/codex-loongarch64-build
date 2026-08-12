@@ -4,5 +4,6 @@
 *.7z
 codex
 work/
+toolchains/
 artifacts/v*/
 !artifacts/README.md

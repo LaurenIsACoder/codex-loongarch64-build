@@ -2,98 +2,72 @@
 
 ## 适用范围
 
-本文档记录的是 Codex CLI `0.135.0` 在 LoongArch64 上的可复现源码构建流程。
+本文记录在原生 LoongArch64 Linux 主机上可复现构建 Codex CLI `0.147.0`
+的方法，目标是完全静态的 `loongarch64-unknown-linux-musl`：
 
-## 与官方 Linux 构建的区别
+- Codex tag：`rust-v0.147.0`
+- `rusty_v8` tag：`v150.4.0`
+- `seccompiler` crate：`0.5.0`
+- Rust：`1.95.0`
 
-官方 Linux release 主要面向：
+## 与主机系统隔离
 
-- `x86_64-unknown-linux-musl`
-- `aarch64-unknown-linux-musl`
+请把仓库放在空间充足的普通用户目录中。下载的软件包、解包后的编译器、
+Rust、sysroot、本地原生库、源码和构建产物全部位于本仓库的 `toolchains/`、
+`work/` 和 `artifacts/` 下。初始化过程只使用 `apt-get download` 下载 deb，
+再用 `dpkg-deb -x` 解包；不会执行 `sudo`，不会安装系统包，也不会修改
+`/usr`、`/opt`、系统 Rust 或系统动态加载器。
 
-本仓库当前维护的是：
+初始化阶段只依赖主机上常见的下载、归档工具，以及 `gcc`、`make`、
+`python3`、`dpkg-deb`。随后使用的 Clang/LLD 20、GN、Ninja、Node.js、
+ccache、pkgconf、musl、libcap、Rust 和 Cargo 都来自仓库内的私有目录。
 
-- `loongarch64-unknown-linux-gnu`
+## 构建流程
 
-因此有两个关键差异：
+```bash
+scripts/setup-local-toolchains.sh
+scripts/fetch-sources.sh
+scripts/apply-patches.sh
+scripts/build-codex-loongarch64.sh
+scripts/build-ripgrep-loongarch64.sh
+scripts/package-release.sh
+```
 
-- 运行时依赖的是 glibc，不是 musl
-- V8 构建和最终链接都需要 LoongArch64 专门处理
+各阶段完成以下工作：
 
-## 前置依赖
+1. 在 `toolchains/` 中准备隔离的静态 musl 编译环境和 sysroot。
+2. 获取固定版本的 Codex、`rusty_v8`、`seccompiler` 及 Cargo Git 依赖。
+3. 应用 LoongArch64 landlock/seccomp 补丁和 `rusty_v8` 源码构建补丁，
+   并把 Cargo 依赖切换到本地路径。
+4. 先构建静态 bubblewrap，把其 SHA-256 写入 Codex，再用仅作用于目标
+   架构的 `+crt-static`、`-static`、medium code model 和 LLD 参数链接 Codex。
+5. 构建静态 ripgrep，生成裸二进制和标准 package 两类发布资产。
 
-最少需要：
+## 为什么 `rusty_v8` 需要补丁
 
-- `git`
-- `curl`
-- `tar`
-- `patch`
-- `python3`
-- `clang` / `clang++`
-- `ld.lld`
-- `ccache`（建议）
-- `rg`
-- `bwrap`
-- Node.js 22+
+`rusty_v8` 没有发布 LoongArch64 预编译包。改为源码编译后还会遇到
+Chromium 构建规则在 LoongArch64 上缺少可用 GN Clang toolchain 标签、
+传入目标不支持的 Clang 参数、musl 目标选择不完整，以及假定存在 Chromium
+预编译 Rust 工具链等问题。`patches/rusty_v8/150.4.0/` 中的补丁只处理这些
+构建基础设施缺口。
 
-本次成功构建所依赖的已知可用组合：
-
-- 系统 clang 19
-- 系统 lld 19
-- 给 `rusty_v8` 使用的 nightly Rust sysroot
-- 最终 Codex 二进制改用 `clang + lld` 进行链接
-
-## 构建步骤
-
-1. `scripts/fetch-sources.sh`
-   - 下载上游 Codex release 源码 tarball
-   - 克隆 `rusty_v8` Git 源码 `v147.4.0`
-   - 下载 `seccompiler 0.5.0`
-2. `scripts/apply-patches.sh`
-   - 给上游 Codex 打 LoongArch 补丁
-   - 给 `seccompiler` 打 `loongarch64` 支持补丁
-   - 给 `rusty_v8` / Chromium 构建规则打兼容补丁
-   - 往 `codex-rs/Cargo.toml` 注入本地 path override
-3. `scripts/build-codex-loongarch64.sh`
-   - 配置 V8 source build 环境
-   - 以 release 模式构建 Codex CLI
-   - 最终二进制链接改走 `clang + lld`
-
-## 这个仓库已经替你处理掉的主要坑
-
-- 上游 release 源码默认会把版本编成 `0.0.0`
-- `seccompiler 0.5.0` 默认不支持 `loongarch64`
-- `rusty_v8` 在 LoongArch64 上没有官方预编译产物
-- crates.io 上的 `v8` 源码包不够完整，必须改用 Git checkout
-- Chromium Rust / Clang 工具链对 LoongArch64 有额外假设，需要本地兼容补丁
-- 最终 Codex 大二进制在 LoongArch64 上用 GNU `ld` 会遇到重定位溢出，因此必须改用 `lld`
+`0.147.0` 的 `codex-cli` 依赖图不包含独立的 `codex-v8-poc`
+工作区 crate，因此默认 CLI 构建并不会编译或链接 V8。这套补丁
+是为该可选组件准备的，不应被视为 CLI 发布产物的验证前提。
 
 ## 期望输出
 
-主要产物：
+- 未裁剪构建二进制：
+  `work/build/target-codex-0.147.0/loongarch64-unknown-linux-musl/release/codex`
+- 静态 bubblewrap：同目录下的 `bwrap`
+- 静态 ripgrep：`toolchains/ripgrep/bin/rg`
+- 裁剪后的发布资产：`artifacts/v0.147.0/`
 
-- `work/build/target-codex-0.135.0/release/codex`
+`scripts/package-release.sh` 会检查三个打包二进制；只要其中任何一个包含
+ELF interpreter 或动态 `NEEDED` 依赖，打包就会中止。
 
-脚本成功后会打印最终路径。
+## 可选覆盖项
 
-## 环境变量覆盖
-
-脚本默认尽量避免写死本机绝对路径。
-
-默认行为：
-
-- `node` 从当前 `PATH` 中获取
-- `rusty_v8` 使用的 nightly sysroot 通过 `rustup` 和 `NIGHTLY_TOOLCHAIN` 自动解析
-
-可选覆盖：
-
-- `NODE_BIN_DIR`：当 Node 22 不在 `PATH` 中时使用
-- `NIGHTLY_TOOLCHAIN`：如果你要改用别的 nightly 工具链名
-- `NIGHTLY_SYSROOT`：如果你想完全绕过 `rustup` 自动解析
-
-示例：
-
-```bash
-export NODE_BIN_DIR=/opt/node-v22/bin
-export NIGHTLY_TOOLCHAIN=nightly-2026-05-06-loongarch64-unknown-linux-gnu
-```
+可以通过环境变量覆盖主要版本和目录，例如 `TOOLCHAIN_ROOT`、`WORK_ROOT`、
+`ARTIFACTS_ROOT`、`MUSL_SYSROOT`、`STABLE_TOOLCHAIN`、`NIGHTLY_SYSROOT`
+和 `RIPGREP_VERSION`。默认值就是本文记录的仓库内固定配置。

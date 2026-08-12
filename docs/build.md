@@ -2,104 +2,81 @@
 
 ## Scope
 
-This guide documents the reproducible LoongArch64 source build for Codex CLI
-`0.140.0` (and serves as a template for future versions).
+This guide covers the reproducible, fully static
+`loongarch64-unknown-linux-musl` build of Codex CLI `0.147.0` on a native
+LoongArch64 Linux host. The pinned upstream inputs are:
 
-## What is different from official Linux builds
+- Codex tag `rust-v0.147.0`
+- `rusty_v8` tag `v150.4.0`
+- `seccompiler` crate `0.5.0`
+- Rust `1.95.0`
 
-Official Linux release assets are built for:
+## Isolation from the host system
 
-- `x86_64-unknown-linux-musl`
-- `aarch64-unknown-linux-musl`
+Run the repository from a user-owned directory with enough free space. All
+downloaded packages, extracted compilers, Rust installations, sysroots, native
+libraries, source trees, and build outputs stay below `toolchains/`, `work/`,
+and `artifacts/` in this repository. The setup flow uses `apt-get download` and
+`dpkg-deb -x`; it does not run `sudo`, install a system package, or modify
+`/usr`, `/opt`, the system Rust installation, or the system dynamic loader.
 
-The LoongArch64 build here is currently based on:
-
-- `loongarch64-unknown-linux-gnu`
-
-That means two important differences:
-
-- it uses a glibc runtime, not musl
-- the V8 and final-link paths need LoongArch64-specific handling
-
-## Prerequisites
-
-Minimum required host tools:
-
-- `git`
-- `curl`
-- `tar`
-- `patch`
-- `python3`
-- `clang` / `clang++`
-- `ld.lld`
-- `ccache` (recommended)
-- `rg`
-- `bwrap`
-- Node.js 22 or newer
-
-Known-good local assumptions used during the successful build:
-
-- system clang 19
-- system lld 19
-- local nightly Rust sysroot for `rusty_v8`
-- final Codex link performed with `clang + lld`
+The only host commands assumed by the setup flow are common download/archive
+tools plus `gcc`, `make`, `python3`, and `dpkg-deb`. The locally extracted
+toolchain then supplies Clang/LLD 20, GN, Ninja, Node.js, ccache, pkgconf, musl,
+libcap, Rust, and Cargo.
 
 ## Build flow
 
-1. `scripts/fetch-sources.sh`
-   - downloads upstream Codex release source tarball
-   - clones `rusty_v8` Git source at `v147.4.0`
-   - downloads `seccompiler 0.5.0`
-2. `scripts/apply-patches.sh`
-   - applies upstream Codex LoongArch patches
-   - applies `seccompiler` LoongArch support patch
-   - applies `rusty_v8` / Chromium compatibility patch set
-   - injects local path overrides into `codex-rs/Cargo.toml`
-3. `scripts/build-codex-loongarch64.sh`
-   - configures V8 source build environment
-   - builds Codex CLI in release mode
-   - uses `clang + lld` for the final binary link
-
-## Key pitfalls that this repo handles
-
-- `seccompiler 0.5.0` does not support `loongarch64` out of the box.
-- `rusty_v8` prebuilt artifacts for LoongArch64 are unavailable.
-- crates.io `v8` source tarball is insufficient for this source-build path;
-  the Git checkout is required.
-- `rusty_v8` ships x86_64 rust-toolchain binaries that must be replaced with
-  native LoongArch64 equivalents before building.
-- Chromium Rust and Clang assumptions require local compatibility adjustments
-  (BUILD.gn, sanitizers.gni).
-- The final Codex binary can overflow GNU `ld` relocations on LoongArch64.
-  The build now uses medium code model (`-C code-model=medium`) by default
-  and falls back to `clang` with `-fuse-ld=lld` if the direct build fails.
-
-## Expected build output
-
-Primary output:
-
-- `work/build/target-codex-0.140.0/release/codex`
-
-The script prints the final path after a successful build.
-
-## Environment overrides
-
-The scripts are written to avoid machine-specific absolute paths by default.
-
-Expected behavior:
-
-- `node` is taken from your current `PATH`
-- the nightly sysroot for `rusty_v8` is resolved with `rustup` from `NIGHTLY_TOOLCHAIN`
-
-Optional overrides:
-
-- `NODE_BIN_DIR` if your Node 22 binary is not already on `PATH`
-- `NIGHTLY_TOOLCHAIN` if you want to use a different nightly toolchain name
-- `NIGHTLY_SYSROOT` if you want to bypass `rustup` resolution entirely
-
-Example:
-
 ```bash
-export NODE_BIN_DIR=/opt/node-v22/bin
-export NIGHTLY_TOOLCHAIN=nightly-2026-05-06-loongarch64-unknown-linux-gnu
+scripts/setup-local-toolchains.sh
+scripts/fetch-sources.sh
+scripts/apply-patches.sh
+scripts/build-codex-loongarch64.sh
+scripts/build-ripgrep-loongarch64.sh
+scripts/package-release.sh
 ```
+
+The steps do the following:
+
+1. Build an isolated static-musl compiler/sysroot environment under
+   `toolchains/`.
+2. Fetch the pinned Codex, `rusty_v8`, `seccompiler`, and Cargo Git sources.
+3. Apply the LoongArch64 landlock/seccomp patches and the `rusty_v8` source
+   build patches, then use local Cargo path overrides.
+4. Build a static bubblewrap resource, embed its SHA-256 digest in Codex, and
+   link Codex using target-only `+crt-static`, `-static`, medium code model, and
+   LLD flags.
+5. Build static ripgrep and create both bare-binary and canonical package
+   archives.
+
+## Why `rusty_v8` needs patches
+
+`rusty_v8` does not publish a LoongArch64 prebuilt archive. Building V8 from
+source also exposes Chromium assumptions that are absent from the upstream
+LoongArch64 path: a usable GN Clang toolchain label, target-specific unsupported
+Clang flags, musl target selection, and an externally supplied native Rust
+toolchain. The patches in `patches/rusty_v8/150.4.0/` address only these build
+plumbing gaps.
+
+The `0.147.0` `codex-cli` dependency graph does not include the standalone
+`codex-v8-poc` workspace crate, so the default CLI build does not compile or
+link V8. The patch set is prepared for that optional component and should not
+be mistaken for a validation requirement of the CLI artifact.
+
+## Expected outputs
+
+- Unstripped build binary:
+  `work/build/target-codex-0.147.0/loongarch64-unknown-linux-musl/release/codex`
+- Static bubblewrap resource: the adjacent `bwrap` file
+- Static ripgrep: `toolchains/ripgrep/bin/rg`
+- Stripped release assets: `artifacts/v0.147.0/`
+
+`scripts/package-release.sh` rejects any of the three packaged executables if
+it contains an ELF interpreter or a dynamic `NEEDED` dependency.
+
+## Useful overrides
+
+All important directories and versions can be overridden without editing the
+scripts, including `TOOLCHAIN_ROOT`, `WORK_ROOT`, `ARTIFACTS_ROOT`,
+`MUSL_SYSROOT`, `STABLE_TOOLCHAIN`, `NIGHTLY_SYSROOT`, and `RIPGREP_VERSION`.
+The defaults are the pinned, repository-local configuration documented above.

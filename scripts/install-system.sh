@@ -8,7 +8,7 @@ BIN_LINK=${CODEX_BIN_LINK:-/usr/local/bin/codex}
 FORCE=${CODEX_FORCE_INSTALL:-0}
 PROXY=${CODEX_PROXY:-}
 
-PACKAGE_ASSET=codex-package-loongarch64-unknown-linux-gnu.tar.gz
+PACKAGE_ASSET=${CODEX_PACKAGE_ASSET:-codex-package-loongarch64-unknown-linux-musl.tar.gz}
 CHECKSUM_ASSET=codex-package_SHA256SUMS
 
 tmp_dir=""
