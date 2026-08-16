@@ -1,8 +1,22 @@
 diff --git a/build.rs b/build.rs
-index d570790..7ccfb86 100644
+index d570790..633ec28 100644
 --- a/build.rs
 +++ b/build.rs
-@@ -475,8 +475,16 @@ fn build_v8(is_asan: bool) {
+@@ -447,9 +447,10 @@ fn build_v8(is_asan: bool) {
+     // V8-as-a-library has no glib dependency; skip it so a musl target_sysroot
+     // doesn't send pkg-config looking for glib inside the sysroot.
+     gn_args.push("use_glib=false".to_string());
+-    // Build libstd + V8's internal Rust crates from source for the musl triple;
+-    // V8's vendored Rust toolchain only ships a glibc host std.
+-    gn_args.push("rust_prebuilt_stdlib=false".to_string());
++    // Chromium's allocator shim assumes glibc interfaces such as sys/cdefs.h
++    // and weak __libc_* symbols. Keep PartitionAlloc available internally but
++    // use musl's allocator for the embedded static library.
++    gn_args.push("use_allocator_shim=false".to_string());
+     // Some V8 sources have glibc-only code paths (e.g. execinfo-based
+     // backtraces in stack_trace_posix.cc) whose helpers are unused on musl,
+     // tripping -Werror,-Wunused-const-variable. Like the iOS/Android cross
+@@ -475,8 +476,16 @@ fn build_v8(is_asan: bool) {
          // no toolchain overrides needed. target_cpu and the amd64/arm64
          // sysroots are set by the aarch64 cross-compilation block above.
        }
@@ -20,6 +34,77 @@ index d570790..7ccfb86 100644
        ),
      }
  
+@@ -1220,6 +1229,13 @@ type NinjaEnv = Vec<(String, String)>;
+ fn ninja(gn_out_dir: &Path, maybe_env: Option<NinjaEnv>) -> Command {
+   let cmd_string = env::var("NINJA").unwrap_or_else(|_| "ninja".to_owned());
+   let mut cmd = Command::new(&cmd_string);
++  // Cargo's jobserver descriptors are not forwarded through the build-script
++  // process, so nested rustc actions see stale CARGO_MAKEFLAGS descriptors.
++  // Ninja already receives an explicit job count below; do not leak the
++  // unusable GNU make jobserver environment into its child processes.
++  cmd.env_remove("CARGO_MAKEFLAGS");
++  cmd.env_remove("MAKEFLAGS");
++  cmd.env_remove("MFLAGS");
+   cmd.arg("-C");
+   cmd.arg(gn_out_dir);
+   if !cmd_string.ends_with("autoninja")
+diff --git a/tools/rust_toolchain.py b/tools/rust_toolchain.py
+index c46ca0e..bc65f86 100644
+--- a/tools/rust_toolchain.py
++++ b/tools/rust_toolchain.py
+@@ -9,6 +9,38 @@ import sys
+ DIR = 'third_party/rust-toolchain'
+ SENTINEL = f'{DIR}/.rusty_v8_version'
+ 
++# Chromium does not publish its bundled Rust toolchain for every host CPU.
++# Native downstream builders can point rusty_v8 at a host Rust sysroot instead.
++external_toolchain = os.environ.get('RUSTY_V8_RUST_TOOLCHAIN_ROOT')
++if external_toolchain:
++    external_toolchain = os.path.abspath(external_toolchain)
++    rustc = os.path.join(external_toolchain, 'bin', 'rustc')
++    rust_source = os.path.join(
++        external_toolchain, 'lib', 'rustlib', 'src', 'rust', 'library'
++    )
++    if not os.path.isfile(rustc) or not os.path.isdir(rust_source):
++        raise RuntimeError(
++            f'RUSTY_V8_RUST_TOOLCHAIN_ROOT must contain bin/rustc and '
++            f'lib/rustlib/src/rust/library: '
++            f'{external_toolchain}'
++        )
++    os.makedirs(DIR, exist_ok=True)
++    for component in ('bin', 'lib'):
++        source = os.path.join(external_toolchain, component)
++        destination = os.path.join(DIR, component)
++        if os.path.lexists(destination):
++            if os.path.islink(destination):
++                if os.path.realpath(destination) == os.path.realpath(source):
++                    continue
++                os.unlink(destination)
++            else:
++                raise RuntimeError(
++                    f'external Rust toolchain destination already exists: {destination}'
++                )
++        os.symlink(source, destination, target_is_directory=True)
++    print(f'using external Rust toolchain: {external_toolchain}')
++    sys.exit()
++
+ host_os = platform.system().lower()
+ if host_os == "darwin":
+     host_os = "mac"
+diff --git a/build/config/clang/BUILD.gn b/build/config/clang/BUILD.gn
+index c38670a..09bb360 100644
+--- a/build/config/clang/BUILD.gn
++++ b/build/config/clang/BUILD.gn
+@@ -197,7 +197,8 @@ template("clang_lib") {
+         } else if (current_cpu == "arm64") {
+           _dir = "aarch64-unknown-linux-gnu"
+         } else if (current_cpu == "loong64") {
+-          _dir = "loongarch64-unknown-linux-gnu"
++          _dir = "linux"
++          _suffix = "-loongarch64"
+         } else if (current_cpu == "riscv64") {
+           _dir = "riscv64-unknown-linux-gnu"
+         } else if (current_cpu == "ppc64") {
 diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
 index 11ddb49..d4a4837 100644
 --- a/build/config/compiler/BUILD.gn
@@ -45,35 +130,91 @@ index 11ddb49..d4a4837 100644
        cflags += [ "-fno-lifetime-dse" ]
      }
  
+diff --git a/build/config/rust.gni b/build/config/rust.gni
+index 8eb1110..80ca90f 100644
+--- a/build/config/rust.gni
++++ b/build/config/rust.gni
+@@ -434,7 +434,8 @@ if (toolchain_for_rust_host_build_tools) {
+ # such as that the panic strategy (unwind, abort) must match how the stdlib is
+ # compiled, which is typically as unwind.
+ rust_prebuilt_stdlib =
+-    !use_chromium_rust_toolchain || toolchain_for_rust_host_build_tools
++    !use_musl &&
++    (!use_chromium_rust_toolchain || toolchain_for_rust_host_build_tools)
+ 
+ rustc_wrapper_inputs = [
+   "//build/action_helpers.py",
+@@ -443,7 +444,7 @@ rustc_wrapper_inputs = [
+ ]
+ 
+ if (host_os == "win") {
+-  rustc_wrapper_inputs += [ "//third_party/rust-toolchain/bin/rustc.exe" ]
++  rustc_wrapper_inputs += [ "${rust_sysroot}/bin/rustc.exe" ]
+ } else {
+-  rustc_wrapper_inputs += [ "//third_party/rust-toolchain/bin/rustc" ]
++  rustc_wrapper_inputs += [ "${rust_sysroot}/bin/rustc" ]
+ }
 diff --git a/build/config/sanitizers/sanitizers.gni b/build/config/sanitizers/sanitizers.gni
-index 04d86c5..993480e 100644
+index 04d86c5..af56591 100644
 --- a/build/config/sanitizers/sanitizers.gni
 +++ b/build/config/sanitizers/sanitizers.gni
-@@ -535,14 +535,17 @@ template("ubsan_hardening") {
+@@ -531,7 +531,11 @@ template("ubsan_hardening") {
+       _condition = invoker.condition
+     }
+ 
+-    if (_condition && !is_ubsan && is_clang) {
++    # The LoongArch LLVM 20 toolchain does not implement
++    # -fsanitize-ignore-for-ubsan-feature. Enabling these trap-only checks
++    # without that flag makes __has_feature(undefined_behavior_sanitizer)
++    # true and introduces an unavailable sanitizer runtime dependency.
++    if (_condition && !is_ubsan && is_clang && current_cpu != "loong64") {
        cflags = [
          "-fsanitize=${invoker.sanitizer}",
          "-fsanitize-trap=${invoker.sanitizer}",
--
--        # Prevents `__has_feature(undefined_behavior_sanitizer)`
--        # from evaluating true. Configs defined here are intended to
--        # be usable even in release builds, i.e. as widely as possible.
--        # It's important not to have full-on UBSan workarounds activate
--        # just because we built support for a specific sanitizer.
--        "-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",
+diff --git a/build/rust/cargo_crate.gni b/build/rust/cargo_crate.gni
+index 4b07ea1..56f00f8 100644
+--- a/build/rust/cargo_crate.gni
++++ b/build/rust/cargo_crate.gni
+@@ -464,9 +464,9 @@ template("cargo_crate") {
        ]
-+      if (current_cpu != "loong64") {
-+        cflags += [
-+          # Prevents `__has_feature(undefined_behavior_sanitizer)`
-+          # from evaluating true. Configs defined here are intended to
-+          # be usable even in release builds, i.e. as widely as possible.
-+          # It's important not to have full-on UBSan workarounds activate
-+          # just because we built support for a specific sanitizer.
-+          "-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",
-+        ]
-+      }
-       if (defined(invoker.cflags)) {
-         cflags += invoker.cflags
+ 
+       if (host_os == "win") {
+-        inputs += [ "//third_party/rust-toolchain/bin/rustc.exe" ]
++        inputs += [ "${rust_sysroot}/bin/rustc.exe" ]
+       } else {
+-        inputs += [ "//third_party/rust-toolchain/bin/rustc" ]
++        inputs += [ "${rust_sysroot}/bin/rustc" ]
        }
+ 
+       build_script_target = ":${_build_script_name}($rust_macro_toolchain)"
+diff --git a/build/rust/known-target-triples.txt b/build/rust/known-target-triples.txt
+index 4a21c8a..9702484 100644
+--- a/build/rust/known-target-triples.txt
++++ b/build/rust/known-target-triples.txt
+@@ -29,6 +29,7 @@ i686-linux-android
+ i686-pc-windows-msvc
+ i686-unknown-linux-gnu
+ loongarch64-unknown-linux-gnu
++loongarch64-unknown-linux-musl
+ riscv64-linux-android
+ riscv64gc-unknown-linux-gnu
+ thumbv7neon-linux-androideabi
+diff --git a/build/rust/std/BUILD.gn b/build/rust/std/BUILD.gn
+index 105a1d5..2181192 100644
+--- a/build/rust/std/BUILD.gn
++++ b/build/rust/std/BUILD.gn
+@@ -269,9 +269,9 @@ if (toolchain_has_rust) {
+       out_depfile = rebase_path(depfile, root_build_dir)
+ 
+       if (host_os == "win") {
+-        inputs = [ "//third_party/rust-toolchain/bin/rustc.exe" ]
++        inputs = [ "${rust_sysroot}/bin/rustc.exe" ]
+       } else {
+-        inputs = [ "//third_party/rust-toolchain/bin/rustc" ]
++        inputs = [ "${rust_sysroot}/bin/rustc" ]
+       }
+ 
+       # For the rustc sysroot we must include even the rlibs we don't pass to
 diff --git a/build/toolchain/linux/BUILD.gn b/build/toolchain/linux/BUILD.gn
 index 9e92339..96ba75c 100644
 --- a/build/toolchain/linux/BUILD.gn
@@ -92,29 +233,4 @@ index 9e92339..96ba75c 100644
 +
  gcc_toolchain("loong64") {
    toolprefix = "loongarch64-unknown-linux-gnu"
-
-diff --git a/tools/rust_toolchain.py b/tools/rust_toolchain.py
-index baab10f..0347fcc 100644
---- a/tools/rust_toolchain.py
-+++ b/tools/rust_toolchain.py
-@@ -9,7 +9,20 @@ import sys
- DIR = 'third_party/rust-toolchain'
- SENTINEL = f'{DIR}/.rusty_v8_version'
- 
-+# Chromium does not publish its bundled Rust toolchain for every host CPU.
-+# Native downstream builders can point rusty_v8 at a host Rust sysroot instead.
-+external_toolchain = os.environ.get('RUSTY_V8_RUST_TOOLCHAIN_ROOT')
-+if external_toolchain:
-+    rustc = os.path.join(external_toolchain, 'bin', 'rustc')
-+    if not os.path.isfile(rustc):
-+        raise RuntimeError(
-+            f'RUSTY_V8_RUST_TOOLCHAIN_ROOT has no bin/rustc: '
-+            f'{external_toolchain}'
-+        )
-+    print(f'using external Rust toolchain: {external_toolchain}')
-+    sys.exit()
-+
- host_os = platform.system().lower()
- if host_os == "darwin":
-     host_os = "mac"
  

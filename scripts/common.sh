@@ -7,6 +7,7 @@ CODEX_VERSION=${CODEX_VERSION:-0.147.0}
 CODEX_TAG=${CODEX_TAG:-rust-v${CODEX_VERSION}}
 RUSTY_V8_VERSION=${RUSTY_V8_VERSION:-150.4.0}
 SECCOMPILER_VERSION=${SECCOMPILER_VERSION:-0.5.0}
+BINDGEN_CLI_VERSION=${BINDGEN_CLI_VERSION:-0.72.1}
 TARGET_TRIPLE=${TARGET_TRIPLE:-loongarch64-unknown-linux-musl}
 
 CODEX_TARBALL_URL=${CODEX_TARBALL_URL:-https://github.com/openai/codex/archive/refs/tags/${CODEX_TAG}.tar.gz}
@@ -39,7 +40,12 @@ PATCH_RUSTY_V8_0150=$REPO_ROOT/patches/rusty_v8/150.4.0/0001-rusty-v8-150.4.0-lo
 
 NODE_BIN_DIR=${NODE_BIN_DIR:-}
 STABLE_TOOLCHAIN=${STABLE_TOOLCHAIN:-1.95.0}
-NIGHTLY_TOOLCHAIN=${NIGHTLY_TOOLCHAIN:-$STABLE_TOOLCHAIN}
+V8_RUST_TOOLCHAIN=${V8_RUST_TOOLCHAIN:-1.96.0}
+CHROMIUM_RUST_REVISION=${CHROMIUM_RUST_REVISION:-4c4205163abcbd08948b3efab796c543ba1ea687}
+CHROMIUM_RUST_SUB_REVISION=${CHROMIUM_RUST_SUB_REVISION:-4}
+CHROMIUM_RUST_LLVM_REVISION=${CHROMIUM_RUST_LLVM_REVISION:-llvmorg-23-init-10931-g20b6ec66}
+V8_RUST_SYSROOT=${V8_RUST_SYSROOT:-$REPO_ROOT/toolchains/rusty-v8-rust-sysroot-${V8_RUST_TOOLCHAIN}-${CHROMIUM_RUST_REVISION}-${CHROMIUM_RUST_SUB_REVISION}}
+NIGHTLY_TOOLCHAIN=${NIGHTLY_TOOLCHAIN:-$V8_RUST_TOOLCHAIN}
 NIGHTLY_SYSROOT=${NIGHTLY_SYSROOT:-}
 LIBCLANG_PATH=${LIBCLANG_PATH:-$REPO_ROOT/toolchains/aosc-root/usr/lib/llvm-20/lib}
 CLANG_BASE_PATH=${CLANG_BASE_PATH:-$REPO_ROOT/toolchains/aosc-root/usr/lib/llvm-20}
@@ -48,6 +54,7 @@ RUSTY_V8_TOOLCHAIN_LIB=$RUSTY_V8_DIR/third_party/rust-toolchain/lib
 TOOLCHAIN_OVERRIDE_DIR=${TOOLCHAIN_OVERRIDE_DIR:-$WORK_ROOT/toolchain-overrides/bin}
 CARGO_HOME_DIR=${CARGO_HOME_DIR:-$REPO_ROOT/toolchains/cargo}
 CARGO_TARGET_DIR_CUSTOM=${CARGO_TARGET_DIR_CUSTOM:-$BUILD_ROOT/target-codex-${CODEX_VERSION}}
+RUSTY_V8_BINDGEN_ROOT=${RUSTY_V8_BINDGEN_ROOT:-$REPO_ROOT/toolchains/rust-bindgen}
 
 log() {
   printf "[%s] %s\n" "$(date +%H:%M:%S)" "$*"
@@ -70,15 +77,17 @@ resolve_nightly_sysroot() {
     return
   fi
 
-  require_cmd rustup
-  local rustc_path
-  rustc_path="$(rustup which --toolchain "$NIGHTLY_TOOLCHAIN" rustc 2>/dev/null || true)"
-  [[ -n "$rustc_path" ]] || {
-    echo "unable to resolve nightly rust toolchain: $NIGHTLY_TOOLCHAIN" >&2
-    echo "set NIGHTLY_SYSROOT explicitly or install the toolchain with rustup" >&2
+  [[ -x "$V8_RUST_SYSROOT/bin/rustc" ]] || {
+    echo "missing repository-local V8 Rust compiler: $V8_RUST_SYSROOT/bin/rustc" >&2
+    echo "run scripts/setup-local-toolchains.sh first" >&2
     exit 1
   }
-  printf '%s\n' "$(cd "$(dirname "$rustc_path")/.." && pwd)"
+  [[ -d "$V8_RUST_SYSROOT/lib/rustlib/src/rust/library/vendor" ]] || {
+    echo "missing Chromium-matched vendored Rust stdlib sources under: $V8_RUST_SYSROOT" >&2
+    echo "run scripts/setup-local-toolchains.sh first" >&2
+    exit 1
+  }
+  printf '%s\n' "$V8_RUST_SYSROOT"
 }
 
 nightly_rustc_version_id() {

@@ -21,6 +21,12 @@ LIBCAP_PREFIX=$LIBCAP_ROOT/prefix
 LIBCAP_TARBALL=$DOWNLOAD_ROOT/libcap-$LIBCAP_VERSION.tar.xz
 LIBCAP_URL=https://mirrors.edge.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-$LIBCAP_VERSION.tar.xz
 LIBCAP_SHA256=de4e7e064c9ba451d5234dd46e897d7c71c96a9ebf9a0c445bc04f4742d83632
+CHROMIUM_RUST_ARCHIVE_NAME=rust-toolchain-${CHROMIUM_RUST_REVISION}-${CHROMIUM_RUST_SUB_REVISION}-${CHROMIUM_RUST_LLVM_REVISION}.tar.xz
+CHROMIUM_RUST_ARCHIVE=$DOWNLOAD_ROOT/$CHROMIUM_RUST_ARCHIVE_NAME
+CHROMIUM_RUST_URL=https://storage.googleapis.com/chromium-browser-clang/Linux_x64/$CHROMIUM_RUST_ARCHIVE_NAME
+CHROMIUM_RUST_SHA256=832de79f8d90940f4aaef023f83a00c1e7210c023f4d57f606b7bf9831c889aa
+CHROMIUM_RUST_SOURCE_ROOT=$TOOLCHAIN_ROOT/chromium-rust-source-${CHROMIUM_RUST_REVISION}-${CHROMIUM_RUST_SUB_REVISION}
+CHROMIUM_RUST_VERSION="rustc 1.96.0 ${CHROMIUM_RUST_REVISION} (${CHROMIUM_RUST_REVISION}-${CHROMIUM_RUST_SUB_REVISION}-${CHROMIUM_RUST_LLVM_REVISION} chromium)"
 
 mkdir -p "$DEB_ROOT" "$AOSC_ROOT" "$MUSL_PACKAGE_ROOT" "$LOCAL_BIN" "$RUSTUP_HOME" "$CARGO_HOME"
 
@@ -128,11 +134,92 @@ if [[ ! -x "$CARGO_HOME/bin/rustup" ]]; then
 fi
 
 rustup set auto-self-update disable
-rustup toolchain install 1.95.0 --profile minimal --component rust-src --no-self-update
+rustup toolchain install 1.95.0 --profile minimal \
+  --component rust-src --no-self-update
 rustup target add --toolchain 1.95.0 "$TARGET_TRIPLE"
+
+# V8 150.4.0's generated GN rules are tied to Chromium's vendored Rust 1.96
+# stdlib source snapshot. Chromium publishes no native LoongArch compiler, so
+# combine the exact, architecture-independent source snapshot from its Linux
+# archive with the native upstream Rust 1.96 compiler. Everything remains below
+# this repository; the x86_64 binaries in the archive are never executed.
+rustup toolchain install "$V8_RUST_TOOLCHAIN" --profile minimal \
+  --component rustfmt --no-self-update
+if [[ ! -f "$CHROMIUM_RUST_ARCHIVE" ]]; then
+  curl -fL --retry 5 --continue-at - \
+    "$CHROMIUM_RUST_URL" -o "$CHROMIUM_RUST_ARCHIVE"
+fi
+printf '%s  %s\n' "$CHROMIUM_RUST_SHA256" "$CHROMIUM_RUST_ARCHIVE" | sha256sum -c -
+
+if [[ ! -f "$CHROMIUM_RUST_SOURCE_ROOT/VERSION" ]]; then
+  mkdir -p "$CHROMIUM_RUST_SOURCE_ROOT"
+  tar -xJf "$CHROMIUM_RUST_ARCHIVE" \
+    -C "$CHROMIUM_RUST_SOURCE_ROOT" \
+    VERSION lib/rustlib/src
+fi
+[[ "$(<"$CHROMIUM_RUST_SOURCE_ROOT/VERSION")" == "$CHROMIUM_RUST_VERSION" ]] || {
+  echo "unexpected Chromium Rust source version in $CHROMIUM_RUST_SOURCE_ROOT/VERSION" >&2
+  exit 1
+}
+[[ -f "$CHROMIUM_RUST_SOURCE_ROOT/lib/rustlib/src/rust/library/vendor/libc-0.2.183/build.rs" ]] || {
+  echo "Chromium Rust source snapshot is incomplete: $CHROMIUM_RUST_SOURCE_ROOT" >&2
+  exit 1
+}
+
+native_v8_rustc=$(rustup which --toolchain "$V8_RUST_TOOLCHAIN" rustc)
+native_v8_root=$(cd "$(dirname "$native_v8_rustc")/.." && pwd)
+mkdir -p "$V8_RUST_SYSROOT/lib/rustlib"
+
+link_component() {
+  local source=$1 destination=$2
+  if [[ -L "$destination" && "$(readlink -f "$destination")" == "$(readlink -f "$source")" ]]; then
+    return
+  fi
+  [[ ! -e "$destination" && ! -L "$destination" ]] || {
+    echo "conflicting V8 Rust sysroot component: $destination" >&2
+    exit 1
+  }
+  ln -s "$source" "$destination"
+}
+
+link_component "$native_v8_root/bin" "$V8_RUST_SYSROOT/bin"
+for source in "$native_v8_root/lib"/*; do
+  [[ "$(basename "$source")" == rustlib ]] && continue
+  link_component "$source" "$V8_RUST_SYSROOT/lib/$(basename "$source")"
+done
+for source in "$native_v8_root/lib/rustlib"/*; do
+  [[ "$(basename "$source")" == src ]] && continue
+  link_component "$source" "$V8_RUST_SYSROOT/lib/rustlib/$(basename "$source")"
+done
+link_component \
+  "$CHROMIUM_RUST_SOURCE_ROOT/lib/rustlib/src" \
+  "$V8_RUST_SYSROOT/lib/rustlib/src"
+
+[[ "$($V8_RUST_SYSROOT/bin/rustc --sysroot "$V8_RUST_SYSROOT" --print sysroot)" == "$V8_RUST_SYSROOT" ]]
+
+# Chromium's V8 build expects a native bindgen executable, rustfmt, and
+# libclang under one toolchain root. Chromium does not publish that bundle for
+# LoongArch64, so build the matching bindgen CLI locally and assemble the root
+# entirely below this repository.
+bindgen_bin="$RUSTY_V8_BINDGEN_ROOT/bin/bindgen"
+if [[ ! -x "$bindgen_bin" ]] || \
+    ! "$bindgen_bin" --version | grep -q " $BINDGEN_CLI_VERSION$"; then
+  LIBCLANG_PATH="$AOSC_ROOT/usr/lib/llvm-20/lib" \
+    cargo install bindgen-cli \
+      --version "$BINDGEN_CLI_VERSION" \
+      --locked \
+      --root "$RUSTY_V8_BINDGEN_ROOT"
+fi
+mkdir -p "$RUSTY_V8_BINDGEN_ROOT/bin" "$RUSTY_V8_BINDGEN_ROOT/lib"
+ln -sfn "$(rustup which --toolchain "$V8_RUST_TOOLCHAIN" rustfmt)" \
+  "$RUSTY_V8_BINDGEN_ROOT/bin/rustfmt"
+ln -sfn "$AOSC_ROOT/usr/lib/llvm-20/lib/libclang.so" \
+  "$RUSTY_V8_BINDGEN_ROOT/lib/libclang.so"
 
 log "Local toolchains ready under $TOOLCHAIN_ROOT"
 clang --version | head -n 1
 ld.lld --version | head -n 1
 node --version
 rustc +1.95.0 --version
+"$V8_RUST_SYSROOT/bin/rustc" --sysroot "$V8_RUST_SYSROOT" --version
+"$bindgen_bin" --version

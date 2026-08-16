@@ -186,6 +186,39 @@ download_asset() {
   curl_with_proxy -fL "https://github.com/$REPO_SLUG/releases/download/$tag/$asset" -o "$out"
 }
 
+verify_package_archive() {
+  local archive="$1"
+  local listing
+  listing=$(tar -tzf "$archive")
+  if awk 'BEGIN { bad = 0 } /(^\/|(^|\/)\.\.($|\/))/ { print; bad = 1 } END { exit bad ? 0 : 1 }' <<<"$listing"; then
+    fail "release package contains an unsafe path"
+  fi
+  for entry in \
+    bin/codex \
+    bin/codex-code-mode-host \
+    codex-path/rg \
+    codex-resources/bwrap \
+    codex-package.json
+  do
+    grep -Fxq "$entry" <<<"$listing" || fail "release package is missing $entry"
+  done
+}
+
+verify_release_tree() {
+  local release_dir="$1"
+  for entry in \
+    bin/codex \
+    bin/codex-code-mode-host \
+    codex-path/rg \
+    codex-resources/bwrap
+  do
+    [[ -x "$release_dir/$entry" ]] || fail "installed release has no executable $entry; retry with --force"
+  done
+  [[ -f "$release_dir/codex-package.json" ]] || fail "installed release has no codex-package.json; retry with --force"
+  "$release_dir/bin/codex" --version >/dev/null
+  "$release_dir/bin/codex-code-mode-host" --help >/dev/null
+}
+
 cleanup() {
   if [[ -n "${tmp_dir:-}" && -d "$tmp_dir" ]]; then
     rm -rf "$tmp_dir"
@@ -204,6 +237,7 @@ main() {
 
   local tag release_dir current_link
   tag=$(release_tag)
+  [[ "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]] || fail "unsafe release tag: $tag"
   release_dir="$INSTALL_ROOT/releases/$tag"
   current_link="$INSTALL_ROOT/current"
   tmp_dir=$(mktemp -d)
@@ -216,6 +250,8 @@ main() {
 
   step "Verifying package checksum"
   (cd "$tmp_dir" && sha256sum -c "$CHECKSUM_ASSET")
+  step "Checking required package companions"
+  verify_package_archive "$tmp_dir/$PACKAGE_ASSET"
 
   mkdir -p "$INSTALL_ROOT/releases"
   if [[ -d "$release_dir" ]]; then
@@ -229,8 +265,11 @@ main() {
   if [[ ! -d "$release_dir" ]]; then
     mkdir -p "$release_dir"
     step "Extracting package to $release_dir"
-    tar -xzf "$tmp_dir/$PACKAGE_ASSET" -C "$release_dir"
+    tar --no-same-owner -xzf "$tmp_dir/$PACKAGE_ASSET" -C "$release_dir"
   fi
+
+  step "Verifying installed Codex and Code Mode host"
+  verify_release_tree "$release_dir"
 
   ln -sfn "$release_dir" "$current_link"
   mkdir -p "$(dirname "$BIN_LINK")"

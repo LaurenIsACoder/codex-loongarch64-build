@@ -13,22 +13,25 @@ This repo produces two release layers.
 
 Planned asset names:
 
-- `codex-loongarch64-unknown-linux-gnu`
-- `codex-loongarch64-unknown-linux-gnu.tar.gz`
+- `codex-loongarch64-unknown-linux-musl`
+- `codex-loongarch64-unknown-linux-musl.tar.gz`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl.tar.gz`
 
 The `.tar.gz` archive should contain a single file named
-`codex-loongarch64-unknown-linux-gnu`.
+`codex-loongarch64-unknown-linux-musl`.
 
 ### 2. Package archive assets
 
 Planned asset names:
 
-- `codex-package-loongarch64-unknown-linux-gnu.tar.gz`
+- `codex-package-loongarch64-unknown-linux-musl.tar.gz`
 - `codex-package_SHA256SUMS`
 
 Canonical package contents:
 
 - `bin/codex`
+- `bin/codex-code-mode-host`
 - `codex-path/rg`
 - `codex-resources/bwrap`
 - `codex-package.json`
@@ -48,17 +51,18 @@ upstream tag name.
 
 Recommended patterns:
 
-- `v0.135.0-loongarch64.1`
-- `v0.135.0-loong64.1`
+- `v0.147.0-loongarch64-musl.2`
+- `v0.147.0-loong64-musl.2`
 
 ## Upload order
 
 1. raw binary asset
 2. raw binary `.tar.gz`
-3. package archive
-4. `codex-package_SHA256SUMS`
-5. `SHA256SUMS`
-6. optional supporting metadata files (`VERSION.txt`, `ldd.txt`)
+3. Code Mode host binary and its `.tar.gz`
+4. package archive
+5. `codex-package_SHA256SUMS`
+6. `SHA256SUMS`
+7. optional supporting metadata files (`VERSION.txt`, `ldd.txt`)
 
 ## One-click install
 

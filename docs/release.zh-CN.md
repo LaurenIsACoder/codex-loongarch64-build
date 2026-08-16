@@ -12,22 +12,25 @@
 
 计划资产名：
 
-- `codex-loongarch64-unknown-linux-gnu`
-- `codex-loongarch64-unknown-linux-gnu.tar.gz`
+- `codex-loongarch64-unknown-linux-musl`
+- `codex-loongarch64-unknown-linux-musl.tar.gz`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl.tar.gz`
 
 其中 `.tar.gz` 内建议只包含一个同名文件：
-`codex-loongarch64-unknown-linux-gnu`。
+`codex-loongarch64-unknown-linux-musl`。
 
 ### 2. 标准 package 资产
 
 计划资产名：
 
-- `codex-package-loongarch64-unknown-linux-gnu.tar.gz`
+- `codex-package-loongarch64-unknown-linux-musl.tar.gz`
 - `codex-package_SHA256SUMS`
 
 标准包内容：
 
 - `bin/codex`
+- `bin/codex-code-mode-host`
 - `codex-path/rg`
 - `codex-resources/bwrap`
 - `codex-package.json`
@@ -46,17 +49,18 @@
 
 建议使用：
 
-- `v0.135.0-loongarch64.1`
-- `v0.135.0-loong64.1`
+- `v0.147.0-loongarch64-musl.2`
+- `v0.147.0-loong64-musl.2`
 
 ## 建议上传顺序
 
 1. 裸二进制资产
 2. 裸二进制 `.tar.gz`
-3. package 归档
-4. `codex-package_SHA256SUMS`
-5. `SHA256SUMS`
-6. 可选元数据文件（`VERSION.txt`、`ldd.txt`）
+3. Code Mode host 裸二进制及其 `.tar.gz`
+4. package 归档
+5. `codex-package_SHA256SUMS`
+6. `SHA256SUMS`
+7. 可选元数据文件（`VERSION.txt`、`ldd.txt`）
 
 ## 一键安装
 

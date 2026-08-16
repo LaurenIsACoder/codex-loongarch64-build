@@ -23,9 +23,10 @@ It is designed to solve two separate problems:
 - Code model: `medium` (`-C code-model=medium`)
 - Final binary linker strategy: local `clang + lld`, static musl
 
-Codex CLI `0.147.0` does not link the workspace's standalone `codex-v8-poc`
-crate. The `rusty_v8 150.4.0` source and patch set are retained for that
-optional workspace component; they are not part of the default CLI binary.
+The Codex entrypoint does not directly link V8, but the canonical package must
+also ship `codex-code-mode-host`, whose runtime depends on `rusty_v8 150.4.0`.
+The build and release checks treat the entrypoint and host as one group, so an
+ordinary CLI smoke test cannot hide a missing Code Mode companion.
 
 ## Repository layout
 
@@ -56,7 +57,10 @@ scripts/package-release.sh
 The setup script downloads and extracts its compiler, musl sysroot, Rust,
 Node.js, GN, Ninja, and native libraries below this repository's ignored
 `toolchains/` directory. It does not install packages or replace files in
-system directories.
+system directories. For V8 it also verifies Chromium's pinned Rust archive,
+uses only its architecture-independent vendored stdlib sources, and pairs them
+with a repository-local native LoongArch64 Rust compiler; no x86_64 tool from
+that archive is executed.
 
 ## One-click system install
 
@@ -100,6 +104,8 @@ Expected assets for `0.147.0`:
 
 - `codex-loongarch64-unknown-linux-musl`
 - `codex-loongarch64-unknown-linux-musl.tar.gz`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl.tar.gz`
 - `codex-package-loongarch64-unknown-linux-musl.tar.gz`
 - `codex-package_SHA256SUMS`
 - `SHA256SUMS`
@@ -108,7 +114,8 @@ Expected assets for `0.147.0`:
 
 The direct binary asset follows the naming style of official Codex releases.
 The package archive follows the canonical Codex package directory layout with
-`bin/`, `codex-resources/`, `codex-path/`, and `codex-package.json`.
+`bin/`, `codex-resources/`, `codex-path/`, and `codex-package.json`;
+`bin/` contains both `codex` and `codex-code-mode-host`.
 
 ## Why this repo exists
 
@@ -125,9 +132,10 @@ Those changes are documented and packaged here so future builds are repeatable.
 
 ## Current status
 
-The `0.147.0` static-musl Codex, bubblewrap, and ripgrep executables were built
-and run natively on LoongArch64 on 2026-08-12. Release packaging rejects
-dynamic executables before creating archives.
+The `0.147.0` static-musl Codex, Code Mode host, bubblewrap, and ripgrep are
+built and verified as a release group on native LoongArch64. Packaging rejects
+dynamic executables, then extracts the archive and runs a Code Mode IPC and
+JavaScript smoke test.
 
 See [VERSION.txt](./VERSION.txt) for the build target metadata and
 [docs/build.md](./docs/build.md) plus [docs/release.md](./docs/release.md) for

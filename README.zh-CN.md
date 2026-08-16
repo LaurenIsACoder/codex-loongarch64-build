@@ -21,9 +21,10 @@ LoongArch64 版本 Codex CLI 的**构建方法**和**分发方法**都沉淀下�
 - 代码模型：`medium`（`-C code-model=medium`）
 - 最终链接策略：本地 `clang + lld`，静态 musl
 
-Codex CLI `0.147.0` 并不链接工作区中独立的 `codex-v8-poc`
-crate。本仓库仍保留 `rusty_v8 150.4.0` 源码和补丁，供这个可选
-工作区组件使用；它不会进入默认 CLI 二进制。
+Codex 主程序本身不直接链接 V8，但标准 package 必须附带
+`codex-code-mode-host`，而这个 Code Mode 伴随程序依赖 `rusty_v8 150.4.0`。
+构建脚本会把主程序和 host 作为一组编译；打包时也会验证两者，避免出现
+普通 CLI 能启动、启用 Code Mode 才发现少了零件的情况。
 
 ## 仓库结构
 
@@ -52,7 +53,9 @@ scripts/package-release.sh
 
 工具链初始化脚本只会在仓库内被 git 忽略的 `toolchains/` 目录下载、
 解包和编译所需组件，包括 Clang、musl sysroot、Rust、Node.js、GN、
-Ninja 和本地原生库；不会安装系统包或覆盖系统目录中的文件。
+Ninja 和本地原生库；不会安装系统包或覆盖系统目录中的文件。V8 所需的
+Chromium Rust 归档会先校验哈希，只取其中与架构无关的 vendored 标准库源码，
+再配合仓库内原生 LoongArch64 Rust 编译器使用；归档里的 x86_64 程序不会执行。
 
 ## 一键系统级安装
 
@@ -79,6 +82,8 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 
 - `codex-loongarch64-unknown-linux-musl`
 - `codex-loongarch64-unknown-linux-musl.tar.gz`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl.tar.gz`
 - `codex-package-loongarch64-unknown-linux-musl.tar.gz`
 - `codex-package_SHA256SUMS`
 - `SHA256SUMS`
@@ -88,6 +93,7 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 其中：
 - 裸二进制资产的命名风格尽量贴近官方 release
 - package 资产使用标准目录布局：`bin/`、`codex-resources/`、`codex-path/`、`codex-package.json`
+- `bin/` 同时包含 `codex` 与 `codex-code-mode-host`
 
 ## 为什么需要这个仓库
 
@@ -103,9 +109,10 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 
 ## 当前状态
 
-- `0.147.0` 的静态 musl Codex、bubblewrap 和 ripgrep 已于 2026-08-12
-  在原生 LoongArch64 上完成构建和运行验证。
-- 打包脚本会先拒绝任何含 ELF interpreter 或动态 `NEEDED` 依赖的二进制。
+- `0.147.0` 的静态 musl Codex、Code Mode host、bubblewrap 和 ripgrep
+  会在原生 LoongArch64 上成组构建和验证。
+- 打包脚本会拒绝任何含 ELF interpreter 或动态 `NEEDED` 依赖的二进制，
+  并在临时解包后执行 Code Mode IPC 与 JavaScript 冒烟测试。
 - 版本与目标信息见 [VERSION.txt](./VERSION.txt)
 - 构建方法见 [docs/build.zh-CN.md](./docs/build.zh-CN.md)
 - 发行方法见 [docs/release.zh-CN.md](./docs/release.zh-CN.md)

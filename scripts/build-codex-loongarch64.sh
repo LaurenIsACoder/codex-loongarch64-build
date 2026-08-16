@@ -37,6 +37,21 @@ GCC_RUNTIME_DIR=${GCC_RUNTIME_DIR:-$(dirname "$(gcc -print-libgcc-file-name)")}
 }
 
 nightly_sysroot="$(resolve_nightly_sysroot)"
+[[ -x "$RUSTY_V8_BINDGEN_ROOT/bin/bindgen" ]] || {
+  echo "missing local V8 bindgen: $RUSTY_V8_BINDGEN_ROOT/bin/bindgen" >&2
+  echo "run scripts/setup-local-toolchains.sh first" >&2
+  exit 1
+}
+[[ -x "$RUSTY_V8_BINDGEN_ROOT/bin/rustfmt" ]] || {
+  echo "missing local V8 rustfmt: $RUSTY_V8_BINDGEN_ROOT/bin/rustfmt" >&2
+  echo "run scripts/setup-local-toolchains.sh first" >&2
+  exit 1
+}
+[[ -e "$RUSTY_V8_BINDGEN_ROOT/lib/libclang.so" ]] || {
+  echo "missing local V8 libclang: $RUSTY_V8_BINDGEN_ROOT/lib/libclang.so" >&2
+  echo "run scripts/setup-local-toolchains.sh first" >&2
+  exit 1
+}
 
 "$REPO_ROOT/scripts/fetch-sources.sh"
 "$REPO_ROOT/scripts/apply-patches.sh"
@@ -75,7 +90,8 @@ export NINJA="$(command -v ninja)"
 unset RUSTC_STABLE_COMPAT
 require_cmd node
 
-export GN_ARGS="rust_sysroot_absolute=\"$nightly_sysroot\" rustc_version=\"$(nightly_rustc_version_id)\" use_sysroot=false chrome_pgo_phase=0 fatal_linker_warnings=false treat_warnings_as_errors=false"
+clang_resource_version="$(basename "$(clang --print-resource-dir)")"
+export GN_ARGS="rust_sysroot_absolute=\"$nightly_sysroot\" rustc_version=\"$(nightly_rustc_version_id)\" rust_bindgen_root=\"$RUSTY_V8_BINDGEN_ROOT\" clang_version=\"$clang_resource_version\" use_sysroot=false chrome_pgo_phase=0 fatal_linker_warnings=false treat_warnings_as_errors=false"
 
 # Cargo ignores target-specific rustflags when the global RUSTFLAGS variable is
 # set. Keep the global variable unset for musl so the target-only static-link
@@ -115,7 +131,7 @@ else
 fi
 
 log "Building Codex CLI ${CODEX_VERSION} for ${TARGET_TRIPLE}"
-log "Using rusty_v8 nightly sysroot: $nightly_sysroot"
+log "Using Chromium-matched rusty_v8 sysroot: $nightly_sysroot"
 log "Code model: medium (-C code-model=medium)"
 log ""
 
@@ -131,27 +147,27 @@ export CODEX_BWRAP_SHA256
 CODEX_BWRAP_SHA256=$(sha256sum "$bwrap_binary" | awk '{print $1}')
 log "Bundled bwrap sha256: $CODEX_BWRAP_SHA256"
 
-# ── Step 1: direct cargo build ───────────────────────────────────────────────
-log "Attempting direct cargo build..."
-if cargo build --release --target "$TARGET_TRIPLE" -p codex-cli --bin codex; then
-  binary="$(codex_binary_path)"
-  if [[ -x "$binary" ]]; then
-    log "Direct build succeeded"
-    log "Build finished: $binary"
-    "$binary" --version
-    exit 0
-  fi
-fi
-
-# ── Step 2: fallback — clang + lld linker override ───────────────────────────
-log "Direct build failed (likely GNU ld relocation overflow), retrying with clang + lld..."
-fallback_linker=${TARGET_CC:-$CC}
-cargo rustc --release --target "$TARGET_TRIPLE" -p codex-cli --bin codex -- \
-  -C linker="$fallback_linker" \
-  -C target-feature=+crt-static \
-  -C link-arg=-fuse-ld=lld \
-  -C link-arg=-static
+# Build the entrypoint and its required Code Mode host in one Cargo invocation,
+# matching upstream's package builder. The grouped graph also enables the
+# vendored OpenSSL feature needed by fully static musl builds.
+# Chromium's V8 build graph deliberately uses unstable rustc flags even with
+# its stable-versioned toolchain. The official bundled compiler enables these;
+# our local LoongArch compiler needs the equivalent scoped bootstrap switch.
+export RUSTC_BOOTSTRAP=1
+log "Building Codex CLI and codex-code-mode-host as one release group..."
+cargo build --release --target "$TARGET_TRIPLE" \
+  -p codex-cli --bin codex \
+  -p codex-code-mode-host --bin codex-code-mode-host
 
 binary="$(codex_binary_path)"
+host_binary="$CARGO_TARGET_DIR/$TARGET_TRIPLE/release/codex-code-mode-host"
+[[ -x "$binary" ]] || { echo "missing built codex binary: $binary" >&2; exit 1; }
+[[ -x "$host_binary" ]] || {
+  echo "missing built Code Mode host: $host_binary" >&2
+  exit 1
+}
+
 log "Build finished: $binary"
+log "Build finished: $host_binary"
 "$binary" --version
+"$host_binary" --help >/dev/null
