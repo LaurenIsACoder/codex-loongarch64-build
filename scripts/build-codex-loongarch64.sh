@@ -22,6 +22,7 @@ require_cmd gn
 require_cmd pkg-config
 require_cmd cargo
 require_cmd rustc
+require_cmd protoc
 ensure_dirs
 
 GCC_RUNTIME_DIR=${GCC_RUNTIME_DIR:-$(dirname "$(gcc -print-libgcc-file-name)")}
@@ -73,7 +74,7 @@ export CARGO_TARGET_DIR="$CARGO_TARGET_DIR_CUSTOM"
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export CARGO_NET_RETRY=10
 export CARGO_HTTP_TIMEOUT=600
-export RUSTUP_TOOLCHAIN=1.95.0
+export RUSTUP_TOOLCHAIN="$STABLE_TOOLCHAIN"
 export V8_FROM_SOURCE=1
 export RUSTY_V8_MUSL_SYSROOT="$MUSL_SYSROOT"
 export RUSTY_V8_RUST_TOOLCHAIN_ROOT="$nightly_sysroot"
@@ -81,6 +82,7 @@ unset DISABLE_CLANG
 export CLANG_BASE_PATH="$CLANG_BASE_PATH"
 export LIBCLANG_PATH="$LIBCLANG_PATH"
 export PYTHON=python3
+export PROTOC="$(command -v protoc)"
 export CCACHE="$(command -v ccache)"
 export CC="$(command -v clang)"
 export CXX="$(command -v clang++)"

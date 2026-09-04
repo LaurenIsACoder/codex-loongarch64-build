@@ -3,10 +3,10 @@
 ## Scope
 
 This guide covers the reproducible, fully static
-`loongarch64-unknown-linux-musl` build of Codex CLI `0.147.0` on a native
+`loongarch64-unknown-linux-musl` build of Codex CLI `0.153.2` on a native
 LoongArch64 Linux host. The pinned upstream inputs are:
 
-- Codex tag `rust-v0.147.0`
+- Codex tag `rust-v0.153.2`
 - `rusty_v8` tag `v150.4.0`
 - `seccompiler` crate `0.5.0`
 - Codex Rust `1.95.0`
@@ -23,7 +23,7 @@ and `artifacts/` in this repository. The setup flow uses `apt-get download` and
 `/usr`, `/opt`, the system Rust installation, or the system dynamic loader.
 
 The only host commands assumed by the setup flow are common download/archive
-tools plus `gcc`, `make`, `python3`, and `dpkg-deb`. The locally extracted
+tools plus `gcc`, `make`, `python3`, `protoc`, and `dpkg-deb`. The locally extracted
 toolchain then supplies Clang/LLD 20, GN, Ninja, Node.js, ccache, pkgconf, musl,
 libcap, Rust, and Cargo.
 
@@ -43,8 +43,9 @@ The steps do the following:
 1. Build an isolated static-musl compiler/sysroot environment under
    `toolchains/`.
 2. Fetch the pinned Codex, `rusty_v8`, `seccompiler`, and Cargo Git sources.
-3. Apply the LoongArch64 landlock/seccomp patches and the `rusty_v8` source
-   build patches, then use local Cargo path overrides.
+3. Apply the LoongArch64 landlock/seccomp patches, prefer the host `PROTOC`
+   binary where the vendored protoc crate has no LoongArch64 payload, apply the
+   `rusty_v8` source build patches, then use local Cargo path overrides.
 4. Build a static bubblewrap resource, embed its SHA-256 digest in Codex, then
    build `codex` and its required `codex-code-mode-host` companion in one Cargo
    invocation using target-only `+crt-static`, `-static`, medium code model,
@@ -66,7 +67,7 @@ LoongArch64 Rust 1.96 compiler under `toolchains/`, and never executes the
 archive's x86_64 binaries. The patches in `patches/rusty_v8/150.4.0/` address
 only these build-plumbing gaps.
 
-The `codex` entrypoint does not directly link V8, but a complete `0.147.0`
+The `codex` entrypoint does not directly link V8, but a complete `0.153.2`
 package must also contain `codex-code-mode-host`, whose Code Mode runtime does
 depend on `rusty_v8`. Building only `codex` can pass ordinary CLI smoke tests
 while still failing as soon as Code Mode is enabled. Release builds therefore
@@ -75,11 +76,11 @@ compile, package, and verify the entrypoint and host as one group.
 ## Expected outputs
 
 - Unstripped build binary:
-  `work/build/target-codex-0.147.0/loongarch64-unknown-linux-musl/release/codex`
+  `work/build/target-codex-0.153.2/loongarch64-unknown-linux-musl/release/codex`
 - Unstripped Code Mode host: the adjacent `codex-code-mode-host` file
 - Static bubblewrap resource: the adjacent `bwrap` file
 - Static ripgrep: `toolchains/ripgrep/bin/rg`
-- Stripped release assets: `artifacts/v0.147.0/`
+- Stripped release assets: `artifacts/v0.153.2/`
 
 `scripts/package-release.sh` rejects `codex`, the Code Mode host, ripgrep, or
 bubblewrap if any contains an ELF interpreter or dynamic `NEEDED` dependency.

@@ -134,9 +134,9 @@ if [[ ! -x "$CARGO_HOME/bin/rustup" ]]; then
 fi
 
 rustup set auto-self-update disable
-rustup toolchain install 1.95.0 --profile minimal \
+rustup toolchain install "$STABLE_TOOLCHAIN" --profile minimal \
   --component rust-src --no-self-update
-rustup target add --toolchain 1.95.0 "$TARGET_TRIPLE"
+rustup target add --toolchain "$STABLE_TOOLCHAIN" "$TARGET_TRIPLE"
 
 # V8 150.4.0's generated GN rules are tied to Chromium's vendored Rust 1.96
 # stdlib source snapshot. Chromium publishes no native LoongArch compiler, so
@@ -220,6 +220,6 @@ log "Local toolchains ready under $TOOLCHAIN_ROOT"
 clang --version | head -n 1
 ld.lld --version | head -n 1
 node --version
-rustc +1.95.0 --version
+rustc "+$STABLE_TOOLCHAIN" --version
 "$V8_RUST_SYSROOT/bin/rustc" --sysroot "$V8_RUST_SYSROOT" --version
 "$bindgen_bin" --version

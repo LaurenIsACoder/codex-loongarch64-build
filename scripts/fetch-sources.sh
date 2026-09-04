@@ -62,18 +62,37 @@ fi
 
 ensure_git_dependency() {
   local path=$1 url=$2 revision=$3
-  if [[ -e "$path/.codex-source-ready" ]]; then
+  local marker="$path/.codex-source-ready"
+  if [[ -f "$marker" ]] && grep -Fxq "$revision" "$marker"; then
     return
   fi
+
+  # Older build caches used an unversioned marker after stripping .git. Keep
+  # that snapshot as a rollback aid, but never silently reuse it for a newer
+  # pinned revision.
+  if [[ -e "$path" && ! -d "$path/.git" ]]; then
+    local stale_path="${path}.stale.$(date -u +%Y%m%dT%H%M%SZ)"
+    log "Preserving stale dependency snapshot: $path -> $stale_path"
+    mv "$path" "$stale_path"
+  fi
+
   if [[ ! -d "$path/.git" ]]; then
     git clone --filter=blob:none --no-checkout "$url" "$path"
   fi
-  git -C "$path" checkout --detach "$revision"
+  if [[ -n "$(git -C "$path" status --porcelain)" ]]; then
+    echo "refusing to replace modified dependency checkout: $path" >&2
+    exit 1
+  fi
+  if ! git -C "$path" checkout --detach "$revision"; then
+    git -C "$path" fetch --depth 1 origin "$revision"
+    git -C "$path" checkout --detach FETCH_HEAD
+  fi
+  printf '%s\n' "$revision" > "$marker"
 }
 
 ensure_git_dependency "$CROSSTERM_SRC_DIR" \
   https://github.com/openai-oss-forks/crossterm \
-  f69a4a0499f2fdc7d5d222df32373ffffe9ba3f5
+  45fecb9508105988f42fe6ff0441783ed3717f92
 ensure_git_dependency "$NUCLEO_SRC_DIR" \
   https://github.com/helix-editor/nucleo.git \
   4253de9faabb4e5c6d81d946a5e35a90f87347ee

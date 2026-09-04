@@ -14,8 +14,8 @@ LoongArch64 版本 Codex CLI 的**构建方法**和**分发方法**都沉淀下�
 
 ## 当前目标版本
 
-- 上游 release：`rust-v0.147.0`
-- CLI 版本：`codex-cli 0.147.0`
+- 上游 release：`rust-v0.153.2`
+- CLI 版本：`codex-cli 0.153.2`
 - 目标架构：`loongarch64-unknown-linux-musl`
 - V8 crate：`150.4.0`
 - 代码模型：`medium`（`-C code-model=medium`）
@@ -68,7 +68,7 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 安装指定 tag：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.147.0-loongarch64-musl.1
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.153.2-loongarch64-musl.1
 ```
 
 ## 计划生成的发布资产
@@ -78,7 +78,7 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 1. 裸二进制发行物
 2. 更接近官方形式的 package 发行物
 
-面向 `0.147.0` 的目标资产：
+面向 `0.153.2` 的目标资产：
 
 - `codex-loongarch64-unknown-linux-musl`
 - `codex-loongarch64-unknown-linux-musl.tar.gz`
@@ -109,7 +109,7 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 
 ## 当前状态
 
-- `0.147.0` 的静态 musl Codex、Code Mode host、bubblewrap 和 ripgrep
+- `0.153.2` 的静态 musl Codex、Code Mode host、bubblewrap 和 ripgrep
   会在原生 LoongArch64 上成组构建和验证。
 - 打包脚本会拒绝任何含 ELF interpreter 或动态 `NEEDED` 依赖的二进制，
   并在临时解包后执行 Code Mode IPC 与 JavaScript 冒烟测试。

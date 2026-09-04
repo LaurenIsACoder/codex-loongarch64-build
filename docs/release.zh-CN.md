@@ -49,8 +49,8 @@
 
 建议使用：
 
-- `v0.147.0-loongarch64-musl.2`
-- `v0.147.0-loong64-musl.2`
+- `v0.153.2-loongarch64-musl.1`
+- `v0.153.2-loong64-musl.1`
 
 ## 建议上传顺序
 

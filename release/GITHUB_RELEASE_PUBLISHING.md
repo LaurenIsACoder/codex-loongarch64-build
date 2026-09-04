@@ -4,104 +4,50 @@ Repository:
 
 - `git@github.com:LaurenIsACoder/codex-loongarch64-build.git`
 
-Current release tag:
+Planned release tag:
 
-- `v0.135.0-loongarch64.1`
+- `v0.153.2-loongarch64-musl.1`
 
 Artifacts directory:
 
-- `artifacts/v0.135.0/`
+- `artifacts/v0.153.2/`
 
-## 1. Push commits and tag
+Do not publish until the native LoongArch64 build, package verification, and
+maintainer review are complete.
 
-```bash
-cd <your-clone-dir>/codex-loongarch64-build-repo
-git push origin main
-git push origin v0.135.0-loongarch64.1
-```
-
-## 2. Release title
-
-Recommended title:
+## Release title
 
 ```text
-Codex CLI 0.135.0 for LoongArch64 Linux
+Codex CLI LoongArch64 Community Build v0.153.2 (static musl)
 ```
 
-## 3. Release body
+## Release body
 
-Use:
+Use `release/RELEASE_NOTES_v0.153.2-loongarch64-musl.1.md` after replacing any
+pending validation fields with the final native results.
 
-- `release/RELEASE_NOTES_v0.135.0-loongarch64.1.md`
+## Required assets
 
-or start from:
-
-- `release/RELEASE_NOTES_TEMPLATE.md`
-
-## 4. Upload these assets
-
-From `artifacts/v0.135.0/` upload:
-
-- `codex-loongarch64-unknown-linux-gnu`
-- `codex-loongarch64-unknown-linux-gnu.tar.gz`
-- `codex-package-loongarch64-unknown-linux-gnu.tar.gz`
+- `codex-loongarch64-unknown-linux-musl`
+- `codex-loongarch64-unknown-linux-musl.tar.gz`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl`
+- `codex-code-mode-host-loongarch64-unknown-linux-musl.tar.gz`
+- `codex-package-loongarch64-unknown-linux-musl.tar.gz`
 - `codex-package_SHA256SUMS`
 - `SHA256SUMS`
 - `install-system.sh`
 - `VERSION.txt`
 - `ldd.txt`
-
-Optional:
-
 - `README.md`
 - `README.zh-CN.md`
 
-## 5. Recommended asset description order
+## Publication sequence
 
-1. `codex-package-loongarch64-unknown-linux-gnu.tar.gz`
-   Recommended package-style install target for most users.
-2. `install-system.sh`
-   One-click system-wide installer.
-3. `codex-loongarch64-unknown-linux-gnu.tar.gz`
-   Direct binary tarball for advanced/manual installs.
-4. `codex-loongarch64-unknown-linux-gnu`
-   Raw binary only.
-5. `codex-package_SHA256SUMS`
-6. `SHA256SUMS`
-7. `VERSION.txt`
-8. `ldd.txt`
-
-## 6. Recommended install command to publish in the release page
-
-Latest release:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash
-```
-
-Specific release:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.135.0-loongarch64.1
-```
-
-## 7. Manual upload checklist
-
-- [ ] `git push origin main`
-- [ ] `git push origin v0.135.0-loongarch64.1`
-- [ ] create GitHub Release from tag `v0.135.0-loongarch64.1`
-- [ ] paste `release/RELEASE_NOTES_v0.135.0-loongarch64.1.md`
-- [ ] upload all required assets from `artifacts/v0.135.0/`
-- [ ] verify `install-system.sh` is attached
-- [ ] verify `codex-package-loongarch64-unknown-linux-gnu.tar.gz` is attached
-- [ ] verify `SHA256SUMS` and `codex-package_SHA256SUMS` are attached
-
-## 8. Post-release smoke test
-
-On a LoongArch64 target machine:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.135.0-loongarch64.1
-codex --version
-codex --help
-```
+1. Review the local commit and native validation evidence.
+2. Push the reviewed commit and the `build/0.153.2-musl` branch.
+3. Create the tag `v0.153.2-loongarch64-musl.1` from that reviewed commit.
+4. Create a draft GitHub Release and upload all required assets.
+5. Compare uploaded asset names, sizes, and SHA-256 values with the local set.
+6. Publish only after the draft audit passes.
+7. Re-download the public package and verify checksum, package layout, and
+   native smoke tests once more.

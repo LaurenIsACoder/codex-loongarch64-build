@@ -1,8 +1,11 @@
 upstream release tag:
-rust-v0.147.0
+rust-v0.153.2
 
 upstream cli version:
-codex-cli 0.147.0
+codex-cli 0.153.2
+
+upstream commit:
+657a993cbee87acf52d14b758ce49dbd46d1b8eb
 
 target triple:
 loongarch64-unknown-linux-musl
@@ -18,21 +21,11 @@ local clang + lld, static musl
 medium code model (default)
 
 status:
-verified native LoongArch64 static-musl build, 2026-08-12
-codex --version: codex-cli 0.147.0
-Codex upstream commit: be6e8eac029b183056b7e4402879f15d2c85f61b
-bwrap, codex, and packaged ripgrep have no ELF interpreter or NEEDED entries
-
-rusty_v8 scope:
-v150.4.0 source and optional LoongArch64/musl patch are staged
-codex-cli 0.147.0 does not depend on codex-v8-poc, so V8 is not linked into the CLI
-
-previous releases:
-0.142.4 (2026-06-28)
-0.142.2 (2026-06-27)
-0.142.0 (2026-06-23)
-0.140.0 (2026-06-18)
-0.135.0 (2026-06-02)
+verified native LoongArch64 static-musl build, 2026-09-04
+codex --version: codex-cli 0.153.2
+codex, codex-code-mode-host, bwrap, and packaged ripgrep have no ELF
+interpreter or dynamic NEEDED entries
+package SHA-256: 021de2f4c7f37795b7779f560c7f29e5874706f6268d8b894585c88114a6231a
 
 repository:
 https://github.com/LaurenIsACoder/codex-loongarch64-build

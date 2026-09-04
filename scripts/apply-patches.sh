@@ -13,6 +13,24 @@ mkdir -p "$STAMP_DIR"
 [[ -d "$RUSTY_V8_DIR" ]] || { echo "missing rusty_v8 source tree: $RUSTY_V8_DIR" >&2; exit 1; }
 [[ -d "$SECCOMPILER_SRC_DIR" ]] || { echo "missing seccompiler source tree: $SECCOMPILER_SRC_DIR" >&2; exit 1; }
 
+apply_patch_once() {
+  local source_dir=$1 patch_file=$2 stamp_file=$3 description=$4
+  if [[ -f "$stamp_file" ]]; then
+    return
+  fi
+
+  if patch --dry-run -d "$source_dir" -p1 < "$patch_file" >/dev/null; then
+    log "Applying $description patch"
+    patch -d "$source_dir" -p1 < "$patch_file"
+  elif patch --dry-run -R -d "$source_dir" -p1 < "$patch_file" >/dev/null; then
+    log "$description patch is already present in the reused source tree"
+  else
+    echo "$description patch does not apply cleanly in either direction: $patch_file" >&2
+    exit 1
+  fi
+  touch "$stamp_file"
+}
+
 # ── select patch files by version ────────────────────────────────────────────
 if [[ "$CODEX_VERSION" == "0.135.0" ]]; then
   CODEX_PATCH="$PATCH_CODEX"
@@ -20,28 +38,28 @@ if [[ "$CODEX_VERSION" == "0.135.0" ]]; then
 elif [[ "$CODEX_VERSION" == "0.147.0" ]]; then
   CODEX_PATCH="$PATCH_CODEX_0147"
   RUSTY_V8_PATCH="$PATCH_RUSTY_V8_0150"
+elif [[ "$CODEX_VERSION" == "0.153.2" ]]; then
+  CODEX_PATCH="$PATCH_CODEX_0153"
+  RUSTY_V8_PATCH="$PATCH_RUSTY_V8_0150"
 else
   CODEX_PATCH="$PATCH_CODEX_0140"
   RUSTY_V8_PATCH="$PATCH_RUSTY_V8_0149"
 fi
 
-if [[ ! -f "$STAMP_DIR/codex.patch.applied" ]]; then
-  log "Applying Codex patch"
-  patch -d "$CODEX_SRC_DIR" -p1 < "$CODEX_PATCH"
-  touch "$STAMP_DIR/codex.patch.applied"
+apply_patch_once \
+  "$CODEX_SRC_DIR" "$CODEX_PATCH" \
+  "$STAMP_DIR/codex.patch.applied" "Codex"
+if [[ "$CODEX_VERSION" == "0.153.2" ]]; then
+  apply_patch_once \
+    "$CODEX_SRC_DIR" "$PATCH_CODEX_PROTOC_0153" \
+    "$STAMP_DIR/codex.protoc.patch.applied" "Codex protoc fallback"
 fi
-
-if [[ ! -f "$STAMP_DIR/seccompiler.patch.applied" ]]; then
-  log "Applying seccompiler patch"
-  patch -d "$SECCOMPILER_SRC_DIR" -p1 < "$PATCH_SECCOMPILER"
-  touch "$STAMP_DIR/seccompiler.patch.applied"
-fi
-
-if [[ ! -f "$STAMP_DIR/rusty_v8.patch.applied" ]]; then
-  log "Applying rusty_v8 patch"
-  patch -d "$RUSTY_V8_DIR" -p1 < "$RUSTY_V8_PATCH"
-  touch "$STAMP_DIR/rusty_v8.patch.applied"
-fi
+apply_patch_once \
+  "$SECCOMPILER_SRC_DIR" "$PATCH_SECCOMPILER" \
+  "$STAMP_DIR/seccompiler.patch.applied" "seccompiler"
+apply_patch_once \
+  "$RUSTY_V8_DIR" "$RUSTY_V8_PATCH" \
+  "$STAMP_DIR/rusty_v8.patch.applied" "rusty_v8"
 
 cargo_toml="$CODEX_SRC_DIR/codex-rs/Cargo.toml"
 if ! grep -q '^seccompiler = { path = ' "$cargo_toml"; then
