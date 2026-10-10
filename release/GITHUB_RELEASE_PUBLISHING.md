@@ -6,11 +6,11 @@ Repository:
 
 Planned release tag:
 
-- `v0.153.2-loongarch64-musl.1`
+- `v0.162.1-loongarch64-musl.1`
 
 Artifacts directory:
 
-- `artifacts/v0.153.2/`
+- `artifacts/v0.162.1/`
 
 Do not publish until the native LoongArch64 build, package verification, and
 maintainer review are complete.
@@ -18,12 +18,12 @@ maintainer review are complete.
 ## Release title
 
 ```text
-Codex CLI LoongArch64 Community Build v0.153.2 (static musl)
+Codex CLI LoongArch64 Community Build v0.162.1 (static musl)
 ```
 
 ## Release body
 
-Use `release/RELEASE_NOTES_v0.153.2-loongarch64-musl.1.md` after replacing any
+Use `release/RELEASE_NOTES_v0.162.1-loongarch64-musl.1.md` after replacing any
 pending validation fields with the final native results.
 
 ## Required assets
@@ -44,8 +44,8 @@ pending validation fields with the final native results.
 ## Publication sequence
 
 1. Review the local commit and native validation evidence.
-2. Push the reviewed commit and the `build/0.153.2-musl` branch.
-3. Create the tag `v0.153.2-loongarch64-musl.1` from that reviewed commit.
+2. Push the reviewed commit and the `build/0.162.1-musl` branch.
+3. Create the tag `v0.162.1-loongarch64-musl.1` from that reviewed commit.
 4. Create a draft GitHub Release and upload all required assets.
 5. Compare uploaded asset names, sizes, and SHA-256 values with the local set.
 6. Publish only after the draft audit passes.

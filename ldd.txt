@@ -1,12 +1,9 @@
-Sample runtime dependency list for the successful `codex-cli 0.135.0`
-LoongArch64 glibc build:
+Runtime dependency check for codex-cli 0.162.1
+Target: loongarch64-unknown-linux-musl
 
-	linux-vdso.so.1
-	libz.so.1
-	libssl.so.3
-	libcrypto.so.3
-	libgcc_s.so.1
-	libm.so.6
-	libc.so.6
-	/lib64/ld-linux-loongarch-lp64d.so.1
-	libzstd.so.1
+ldd output:
+	not a dynamic executable
+
+Codex, codex-code-mode-host, bubblewrap, and ripgrep are static LoongArch64
+ELF executables. Package verification checks that each has no ELF interpreter
+and no dynamic NEEDED entry.

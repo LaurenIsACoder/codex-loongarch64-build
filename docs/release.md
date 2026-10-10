@@ -51,8 +51,8 @@ upstream tag name.
 
 Recommended patterns:
 
-- `v0.153.2-loongarch64-musl.1`
-- `v0.153.2-loong64-musl.1`
+- `v0.162.1-loongarch64-musl.1`
+- `v0.162.1-loong64-musl.1`
 
 ## Upload order
 

@@ -2,10 +2,10 @@
 
 ## 适用范围
 
-本文记录在原生 LoongArch64 Linux 主机上可复现构建 Codex CLI `0.153.2`
+本文记录在原生 LoongArch64 Linux 主机上可复现构建 Codex CLI `0.162.1`
 的方法，目标是完全静态的 `loongarch64-unknown-linux-musl`：
 
-- Codex tag：`rust-v0.153.2`
+- Codex tag：`rust-v0.162.1`
 - `rusty_v8` tag：`v150.4.0`
 - `seccompiler` crate：`0.5.0`
 - Codex Rust：`1.95.0`
@@ -25,6 +25,15 @@ Rust、sysroot、本地原生库、源码和构建产物全部位于本仓库的
 ccache、pkgconf、musl、libcap、Rust 和 Cargo 都来自仓库内的私有目录。
 
 ## 构建流程
+
+当前 AOSC 软件包固定为 LLVM 20.1.8-14、Node.js 26.10.0、Git 2.56.0、
+CMake 4.4.3；Git、CMake、jsoncpp、rhash 也只在仓库内解包。系统软件索引
+过旧时，可以通过 `APT_LISTS_DIR` 指定单独刷新的 APT 索引目录。
+16 GiB 内存主机建议从 `CARGO_BUILD_JOBS=3` 开始，同时限制 Cargo 与
+嵌套 V8/Ninja 的并行度。
+
+0.162.1 新增的 MCP Rust SDK、HTTP/3，以及 Cargo 解析工作区需要的
+Windows MXC 依赖，均保留上游固定 revision 并切换为本地源码路径。
 
 ```bash
 scripts/setup-local-toolchains.sh
@@ -59,7 +68,7 @@ vendored Rust 标准库文件，普通 `rust-src` 组件不能直接替代。初
 程序不会被执行。`patches/rusty_v8/150.4.0/` 中的补丁只处理这些构建基础设施
 缺口。
 
-`codex` 主程序本身不直接链接 V8，但 `0.153.2` 的完整标准 package 还必须
+`codex` 主程序本身不直接链接 V8，但 `0.162.1` 的完整标准 package 还必须
 包含 `codex-code-mode-host`，而这个伴随程序通过 Code Mode runtime 依赖
 `rusty_v8`。因此，只编出 `codex` 可以通过普通 CLI 冒烟测试，却会在开启
 Code Mode 时因缺少 host 而失败。发布构建必须把二者作为一组编译、打包和验证。
@@ -67,11 +76,11 @@ Code Mode 时因缺少 host 而失败。发布构建必须把二者作为一组�
 ## 期望输出
 
 - 未裁剪构建二进制：
-  `work/build/target-codex-0.153.2/loongarch64-unknown-linux-musl/release/codex`
+  `work/build/target-codex-0.162.1/loongarch64-unknown-linux-musl/release/codex`
 - 未裁剪 Code Mode host：同目录下的 `codex-code-mode-host`
 - 静态 bubblewrap：同目录下的 `bwrap`
 - 静态 ripgrep：`toolchains/ripgrep/bin/rg`
-- 裁剪后的发布资产：`artifacts/v0.153.2/`
+- 裁剪后的发布资产：`artifacts/v0.162.1/`
 
 `scripts/package-release.sh` 会检查 `codex`、Code Mode host、ripgrep 和
 bubblewrap 四个打包二进制；只要其中任何一个包含 ELF interpreter 或动态

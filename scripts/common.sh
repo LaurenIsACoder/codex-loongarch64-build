@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
-CODEX_VERSION=${CODEX_VERSION:-0.153.2}
+CODEX_VERSION=${CODEX_VERSION:-0.162.1}
 CODEX_TAG=${CODEX_TAG:-rust-v${CODEX_VERSION}}
 RUSTY_V8_VERSION=${RUSTY_V8_VERSION:-150.4.0}
 SECCOMPILER_VERSION=${SECCOMPILER_VERSION:-0.5.0}
@@ -29,6 +29,9 @@ NUCLEO_SRC_DIR=${NUCLEO_SRC_DIR:-$GIT_DEPS_ROOT/nucleo}
 RULES_RUST_SRC_DIR=${RULES_RUST_SRC_DIR:-$GIT_DEPS_ROOT/rules_rust}
 TOKIO_TUNGSTENITE_SRC_DIR=${TOKIO_TUNGSTENITE_SRC_DIR:-$GIT_DEPS_ROOT/tokio_tungstenite}
 TUNGSTENITE_SRC_DIR=${TUNGSTENITE_SRC_DIR:-$GIT_DEPS_ROOT/tungstenite}
+MXC_SRC_DIR=${MXC_SRC_DIR:-$GIT_DEPS_ROOT/mxc}
+H3_SRC_DIR=${H3_SRC_DIR:-$GIT_DEPS_ROOT/h3}
+RMCP_SRC_DIR=${RMCP_SRC_DIR:-$GIT_DEPS_ROOT/rmcp}
 
 PATCH_CODEX=$REPO_ROOT/patches/openai-codex/0.135.0/0001-codex-0.135.0-version-and-loongarch-linux-sandbox.patch
 PATCH_CODEX_0140=$REPO_ROOT/patches/openai-codex/0.140.0/0001-codex-0.140.0-add-loongarch64-and-riscv64-landlock.patch
@@ -38,6 +41,7 @@ PATCH_RUSTY_V8_0149=$REPO_ROOT/patches/rusty_v8/149.2.0/0001-rusty-v8-149.2.0-lo
 PATCH_CODEX_0147=$REPO_ROOT/patches/openai-codex/0.147.0/0001-codex-0.147.0-add-loongarch64-musl-support.patch
 PATCH_CODEX_0153=$REPO_ROOT/patches/openai-codex/0.153.2/0001-codex-0.153.2-add-loongarch64-musl-support.patch
 PATCH_CODEX_PROTOC_0153=$REPO_ROOT/patches/openai-codex/0.153.2/0002-codex-0.153.2-use-PROTOC-on-unsupported-host.patch
+PATCH_CODEX_0162=$REPO_ROOT/patches/openai-codex/0.162.1/0001-codex-0.162.1-loongarch64.patch
 PATCH_RUSTY_V8_0150=$REPO_ROOT/patches/rusty_v8/150.4.0/0001-rusty-v8-150.4.0-loongarch64-musl.patch
 
 NODE_BIN_DIR=${NODE_BIN_DIR:-}

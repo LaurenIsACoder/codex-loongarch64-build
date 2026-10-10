@@ -19,10 +19,10 @@ apply_patch_once() {
     return
   fi
 
-  if patch --dry-run -d "$source_dir" -p1 < "$patch_file" >/dev/null; then
+  if patch --batch --forward --dry-run -d "$source_dir" -p1 < "$patch_file" >/dev/null; then
     log "Applying $description patch"
-    patch -d "$source_dir" -p1 < "$patch_file"
-  elif patch --dry-run -R -d "$source_dir" -p1 < "$patch_file" >/dev/null; then
+    patch --batch --forward -d "$source_dir" -p1 < "$patch_file"
+  elif patch --batch --dry-run -R -d "$source_dir" -p1 < "$patch_file" >/dev/null; then
     log "$description patch is already present in the reused source tree"
   else
     echo "$description patch does not apply cleanly in either direction: $patch_file" >&2
@@ -41,6 +41,9 @@ elif [[ "$CODEX_VERSION" == "0.147.0" ]]; then
 elif [[ "$CODEX_VERSION" == "0.153.2" ]]; then
   CODEX_PATCH="$PATCH_CODEX_0153"
   RUSTY_V8_PATCH="$PATCH_RUSTY_V8_0150"
+elif [[ "$CODEX_VERSION" == "0.162.1" ]]; then
+  CODEX_PATCH="$PATCH_CODEX_0162"
+  RUSTY_V8_PATCH="$PATCH_RUSTY_V8_0150"
 else
   CODEX_PATCH="$PATCH_CODEX_0140"
   RUSTY_V8_PATCH="$PATCH_RUSTY_V8_0149"
@@ -53,6 +56,11 @@ if [[ "$CODEX_VERSION" == "0.153.2" ]]; then
   apply_patch_once \
     "$CODEX_SRC_DIR" "$PATCH_CODEX_PROTOC_0153" \
     "$STAMP_DIR/codex.protoc.patch.applied" "Codex protoc fallback"
+fi
+if [[ "$CODEX_VERSION" == "0.162.1" ]]; then
+  apply_patch_once "$CODEX_SRC_DIR" \
+    "$REPO_ROOT/patches/openai-codex/0.162.1/0002-daemon-mounts-match-statfs-word-type.patch" \
+    "$STAMP_DIR/codex.statfs.patch.applied" "Codex statfs word type"
 fi
 apply_patch_once \
   "$SECCOMPILER_SRC_DIR" "$PATCH_SECCOMPILER" \
@@ -109,6 +117,19 @@ if ! grep -Fq "path = \"$TUNGSTENITE_SRC_DIR\"" "$tokio_tungstenite_toml"; then
   TUNGSTENITE_SRC_DIR="$TUNGSTENITE_SRC_DIR" perl -0pi -e '
     s{git = "https://github\.com/openai-oss-forks/tungstenite-rs"\nrev = "[^"]+"}{path = "$ENV{TUNGSTENITE_SRC_DIR}"}g;
   ' "$tokio_tungstenite_toml"
+fi
+
+if [[ "$CODEX_VERSION" == "0.162.1" ]]; then
+  MXC_SRC_DIR="$MXC_SRC_DIR" RMCP_SRC_DIR="$RMCP_SRC_DIR" perl -0pi -e '
+    s{learning_mode_windows = \{ git = "[^"]+", rev = "[^"]+" \}}{learning_mode_windows = { path = "$ENV{MXC_SRC_DIR}/src/backends/learning_mode/windows" }}g;
+    s{wxc_common = \{ git = "[^"]+", rev = "[^"]+" \}}{wxc_common = { path = "$ENV{MXC_SRC_DIR}/src/core/wxc_common" }}g;
+    s{appcontainer_common = \{ git = "[^"]+", rev = "[^"]+" \}}{appcontainer_common = { path = "$ENV{MXC_SRC_DIR}/src/backends/appcontainer/common" }}g;
+    s!rmcp = \{ git = "[^"]+", rev = "[^"]+",!rmcp = { path = "$ENV{RMCP_SRC_DIR}/crates/rmcp",!g;
+  ' "$cargo_toml"
+  H3_SRC_DIR="$H3_SRC_DIR" perl -0pi -e '
+    s{h3 = \{ git = "[^"]+", rev = "[^"]+" \}}{h3 = { path = "$ENV{H3_SRC_DIR}/h3" }}g;
+    s{h3-quinn = \{ git = "[^"]+", rev = "[^"]+" \}}{h3-quinn = { path = "$ENV{H3_SRC_DIR}/h3-quinn" }}g;
+  ' "$CODEX_SRC_DIR/codex-rs/tcp-tunnel/Cargo.toml"
 fi
 
 log "Patches applied"

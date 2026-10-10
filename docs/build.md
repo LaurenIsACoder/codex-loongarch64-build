@@ -3,10 +3,10 @@
 ## Scope
 
 This guide covers the reproducible, fully static
-`loongarch64-unknown-linux-musl` build of Codex CLI `0.153.2` on a native
+`loongarch64-unknown-linux-musl` build of Codex CLI `0.162.1` on a native
 LoongArch64 Linux host. The pinned upstream inputs are:
 
-- Codex tag `rust-v0.153.2`
+- Codex tag `rust-v0.162.1`
 - `rusty_v8` tag `v150.4.0`
 - `seccompiler` crate `0.5.0`
 - Codex Rust `1.95.0`
@@ -28,6 +28,17 @@ toolchain then supplies Clang/LLD 20, GN, Ninja, Node.js, ccache, pkgconf, musl,
 libcap, Rust, and Cargo.
 
 ## Build flow
+
+The current AOSC package pins use LLVM 20.1.8-14, Node.js 26.10.0, Git
+2.56.0, and CMake 4.4.3. Git, CMake, jsoncpp, and rhash are extracted locally
+as well, so a fresh host need not install these packages globally. Set
+`APT_LISTS_DIR` to a separately refreshed APT list directory if the host's
+system package index is stale. On a 16 GiB machine, start with
+`CARGO_BUILD_JOBS=3` to limit both Cargo and nested V8/Ninja concurrency.
+
+Codex 0.162.1 also pins the MCP Rust SDK and HTTP/3 sources. Fetching and
+patching preserves these exact revisions while using local paths, including
+the Windows-only MXC dependency needed for Cargo workspace resolution.
 
 ```bash
 scripts/setup-local-toolchains.sh
@@ -67,7 +78,7 @@ LoongArch64 Rust 1.96 compiler under `toolchains/`, and never executes the
 archive's x86_64 binaries. The patches in `patches/rusty_v8/150.4.0/` address
 only these build-plumbing gaps.
 
-The `codex` entrypoint does not directly link V8, but a complete `0.153.2`
+The `codex` entrypoint does not directly link V8, but a complete `0.162.1`
 package must also contain `codex-code-mode-host`, whose Code Mode runtime does
 depend on `rusty_v8`. Building only `codex` can pass ordinary CLI smoke tests
 while still failing as soon as Code Mode is enabled. Release builds therefore
@@ -76,11 +87,11 @@ compile, package, and verify the entrypoint and host as one group.
 ## Expected outputs
 
 - Unstripped build binary:
-  `work/build/target-codex-0.153.2/loongarch64-unknown-linux-musl/release/codex`
+  `work/build/target-codex-0.162.1/loongarch64-unknown-linux-musl/release/codex`
 - Unstripped Code Mode host: the adjacent `codex-code-mode-host` file
 - Static bubblewrap resource: the adjacent `bwrap` file
 - Static ripgrep: `toolchains/ripgrep/bin/rg`
-- Stripped release assets: `artifacts/v0.153.2/`
+- Stripped release assets: `artifacts/v0.162.1/`
 
 `scripts/package-release.sh` rejects `codex`, the Code Mode host, ripgrep, or
 bubblewrap if any contains an ELF interpreter or dynamic `NEEDED` dependency.

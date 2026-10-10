@@ -33,20 +33,28 @@ mkdir -p "$DEB_ROOT" "$AOSC_ROOT" "$MUSL_PACKAGE_ROOT" "$LOCAL_BIN" "$RUSTUP_HOM
 download_deb() {
   local package_spec=$1 package_name=${1%%=*}
   if ! compgen -G "$DEB_ROOT/${package_name}_*.deb" >/dev/null; then
-    (cd "$DEB_ROOT" && apt-get download "$package_spec")
+    local apt_options=()
+    if [[ -n "${APT_LISTS_DIR:-}" ]]; then
+      apt_options+=(-o "Dir::State::lists=$APT_LISTS_DIR")
+    fi
+    (cd "$DEB_ROOT" && apt-get "${apt_options[@]}" download "$package_spec")
   fi
 }
 
-download_deb llvm-20=20.1.8-10
-download_deb llvm-runtime-20=20.1.8-10
+download_deb llvm-20=20.1.8-14
+download_deb llvm-runtime-20=20.1.8-14
 download_deb musl=1.2.6
 download_deb ninja=1.13.2
-download_deb nodejs-26=26.5.1
-download_deb ccache=4.12.2
-download_deb pkgconf=3.0.5
+download_deb nodejs-26=26.10.0
+download_deb ccache=4.14
+download_deb pkgconf=3.0.7
 download_deb gn=1:0+git20260521
 download_deb ada=3.4.2
 download_deb hdrhistogram-c=0.11.8
+download_deb git=2.56.0
+download_deb cmake=1:4.4.3
+download_deb jsoncpp=1.9.6-1
+download_deb rhash=1.4.4
 
 for deb in "$DEB_ROOT"/*.deb; do
   marker="$AOSC_ROOT/.extracted-$(basename "$deb")"
@@ -86,12 +94,22 @@ for pair in \
   "node:$AOSC_ROOT/usr/lib/node-26/bin/node" \
   "ccache:$AOSC_ROOT/usr/bin/ccache" \
   "pkgconf:$AOSC_ROOT/usr/bin/pkgconf" \
+  "git:$AOSC_ROOT/usr/bin/git" \
+  "cmake:$AOSC_ROOT/usr/bin/cmake" \
   "pkg-config:$AOSC_ROOT/usr/bin/pkg-config"; do
   name=${pair%%:*}
   target=${pair#*:}
   [[ -x "$target" ]]
   ln -sfn "$target" "$LOCAL_BIN/$name"
 done
+
+export LD_LIBRARY_PATH="$AOSC_ROOT/usr/lib:$AOSC_ROOT/usr/lib/llvm-20/lib:${LD_LIBRARY_PATH:-}"
+
+# AOSC installs the module tree without a version suffix. Relocated CMake
+# searches next to its executable using its upstream versioned directory.
+if [[ ! -e "$AOSC_ROOT/usr/share/cmake-4.4" ]]; then
+  ln -s cmake "$AOSC_ROOT/usr/share/cmake-4.4"
+fi
 
 if [[ ! -f "$LIBCAP_PREFIX/lib/libcap.a" ]]; then
   if [[ ! -f "$LIBCAP_TARBALL" ]]; then
@@ -205,7 +223,7 @@ bindgen_bin="$RUSTY_V8_BINDGEN_ROOT/bin/bindgen"
 if [[ ! -x "$bindgen_bin" ]] || \
     ! "$bindgen_bin" --version | grep -q " $BINDGEN_CLI_VERSION$"; then
   LIBCLANG_PATH="$AOSC_ROOT/usr/lib/llvm-20/lib" \
-    cargo install bindgen-cli \
+    cargo "+$STABLE_TOOLCHAIN" install bindgen-cli \
       --version "$BINDGEN_CLI_VERSION" \
       --locked \
       --root "$RUSTY_V8_BINDGEN_ROOT"

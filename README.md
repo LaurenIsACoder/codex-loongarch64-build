@@ -16,8 +16,8 @@ It is designed to solve two separate problems:
 
 ## Current target
 
-- Upstream release: `rust-v0.153.2`
-- CLI version: `codex-cli 0.153.2`
+- Upstream release: `rust-v0.162.1`
+- CLI version: `codex-cli 0.162.1`
 - Architecture: `loongarch64-unknown-linux-musl`
 - V8 crate: `150.4.0`
 - Code model: `medium` (`-C code-model=medium`)
@@ -73,10 +73,14 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 Install a specific release tag system-wide:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.153.2-loongarch64-musl.1
+curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-build/main/scripts/install-system.sh | sudo bash -s -- --release v0.162.1-loongarch64-musl.1
 ```
 
 ## Previous releases
+
+### v0.153.2
+
+See [release/RELEASE_NOTES_v0.153.2-loongarch64-musl.1.md](release/RELEASE_NOTES_v0.153.2-loongarch64-musl.1.md).
 
 ### v0.147.0
 
@@ -104,7 +108,7 @@ See [release/RELEASE_NOTES_v0.135.0-loongarch64.1.md](release/RELEASE_NOTES_v0.1
 
 ## Intended release assets
 
-Expected assets for `0.153.2`:
+Expected assets for `0.162.1`:
 
 - `codex-loongarch64-unknown-linux-musl`
 - `codex-loongarch64-unknown-linux-musl.tar.gz`
@@ -136,10 +140,10 @@ Those changes are documented and packaged here so future builds are repeatable.
 
 ## Current status
 
-The `0.153.2` static-musl Codex, Code Mode host, bubblewrap, and ripgrep are
-built and verified as a release group on native LoongArch64. Packaging rejects
-dynamic executables, then extracts the archive and runs a Code Mode IPC and
-JavaScript smoke test.
+The `0.162.1` static-musl Codex and Code Mode host have been built on native
+LoongArch64. Packaging rejects dynamic executables, then extracts the archive
+and runs a Code Mode IPC and JavaScript smoke test. Bundled ripgrep is 15.2.0,
+matching the upstream package manifest, with 16 KiB-page-compatible jemalloc.
 
 See [VERSION.txt](./VERSION.txt) for the build target metadata and
 [docs/build.md](./docs/build.md) plus [docs/release.md](./docs/release.md) for

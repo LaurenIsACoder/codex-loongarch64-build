@@ -12,6 +12,9 @@ CARGO_HOME_DIR=${CARGO_HOME_DIR:-$TOOLCHAIN_ROOT/cargo}
 export RUSTUP_HOME
 export PATH="$CARGO_HOME_DIR/bin:$LOCAL_BIN:$PATH"
 export LD_LIBRARY_PATH="$AOSC_ROOT/usr/lib:$AOSC_ROOT/usr/lib/llvm-20/lib:${LD_LIBRARY_PATH:-}"
+if [[ -d "$AOSC_ROOT/usr/libexec/git-core" ]]; then
+  export GIT_EXEC_PATH="$AOSC_ROOT/usr/libexec/git-core"
+fi
 
 require_cmd python3
 require_cmd clang
@@ -84,6 +87,7 @@ export LIBCLANG_PATH="$LIBCLANG_PATH"
 export PYTHON=python3
 export PROTOC="$(command -v protoc)"
 export CCACHE="$(command -v ccache)"
+export CCACHE_DIR="${CCACHE_DIR:-$WORK_ROOT/ccache}"
 export CC="$(command -v clang)"
 export CXX="$(command -v clang++)"
 export AR="$(command -v llvm-ar)"
