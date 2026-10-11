@@ -109,6 +109,10 @@ curl -fsSL https://raw.githubusercontent.com/LaurenIsACoder/codex-loongarch64-bu
 
 ## 当前状态
 
+- `0.162.1` 补丁支持 LoongArch64 本地 daemon 的 GNU/musl 包识别；官方
+  更新渠道不提供该架构，daemon 包通过 `update --from-cli` 手动更新。
+  使用方式、验证范围与限制见 [daemon 说明](docs/daemon.md)。
+
 - `0.162.1` 的 Codex 和 Code Mode host 已完成原生 LoongArch64 静态 musl 构建。
 - 内置 ripgrep 已更新为上游 package 使用的 15.2.0，并保留 16 KiB 页大小配置。
 - 打包脚本会拒绝任何含 ELF interpreter 或动态 `NEEDED` 依赖的二进制，

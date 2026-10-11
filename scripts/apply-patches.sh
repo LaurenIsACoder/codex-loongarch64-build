@@ -61,6 +61,9 @@ if [[ "$CODEX_VERSION" == "0.162.1" ]]; then
   apply_patch_once "$CODEX_SRC_DIR" \
     "$REPO_ROOT/patches/openai-codex/0.162.1/0002-daemon-mounts-match-statfs-word-type.patch" \
     "$STAMP_DIR/codex.statfs.patch.applied" "Codex statfs word type"
+  apply_patch_once "$CODEX_SRC_DIR" \
+    "$REPO_ROOT/patches/openai-codex/0.162.1/0003-loongarch64-packaged-daemon.patch" \
+    "$STAMP_DIR/codex.daemon.patch.applied" "Codex LoongArch64 packaged daemon"
 fi
 apply_patch_once \
   "$SECCOMPILER_SRC_DIR" "$PATCH_SECCOMPILER" \

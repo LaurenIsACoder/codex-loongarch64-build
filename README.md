@@ -1,5 +1,9 @@
 # Codex LoongArch64 Build Repo
 
+The 0.162.1 patch set supports local daemon package detection for LoongArch64
+GNU/musl builds. Official daemon updates remain unavailable; see
+[local daemon support](docs/daemon.md) for package replacement and validation.
+
 This repository is a maintainable build-and-release workspace for an unofficial
 LoongArch64 Linux port of OpenAI Codex CLI.
 

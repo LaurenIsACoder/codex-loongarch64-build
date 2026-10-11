@@ -1,0 +1,132 @@
+--- a/codex-rs/app-server-daemon/src/prepare_install.rs
++++ b/codex-rs/app-server-daemon/src/prepare_install.rs
+@@ -483,6 +483,8 @@
+         ("linux", "aarch64") => Ok("aarch64-unknown-linux-musl"),
+         ("linux", "x86_64") if cfg!(target_env = "gnu") => Ok("x86_64-unknown-linux-gnu"),
+         ("linux", "x86_64") => Ok("x86_64-unknown-linux-musl"),
++        ("linux", "loongarch64") if cfg!(target_env = "gnu") => Ok("loongarch64-unknown-linux-gnu"),
++        ("linux", "loongarch64") => Ok("loongarch64-unknown-linux-musl"),
+         ("windows", "aarch64") => Ok("aarch64-pc-windows-msvc"),
+         ("windows", "x86_64") => Ok("x86_64-pc-windows-msvc"),
+         (os, arch) => Err(anyhow!("unsupported packaged daemon platform {os}/{arch}")),
+--- a/codex-rs/app-server-daemon/src/prepare_install_tests.rs
++++ b/codex-rs/app-server-daemon/src/prepare_install_tests.rs
+@@ -8,6 +8,20 @@
+ use std::path::Path;
+ use std::path::PathBuf;
+ 
++#[cfg(all(target_os = "linux", target_arch = "loongarch64"))]
++#[test]
++fn recognizes_loongarch_package_target() {
++    let expected = if cfg!(target_env = "gnu") {
++        "loongarch64-unknown-linux-gnu"
++    } else {
++        "loongarch64-unknown-linux-musl"
++    };
++    assert_eq!(
++        super::platform_target().expect("LoongArch target"),
++        expected
++    );
++}
++
+ fn daemon(home: &std::path::Path) -> crate::Daemon {
+     let state = home.join("app-server-daemon");
+     crate::Daemon {
+--- a/codex-rs/app-server-daemon/src/update_loop.rs
++++ b/codex-rs/app-server-daemon/src/update_loop.rs
+@@ -49,6 +49,12 @@
+     daemon: &Daemon,
+     http_client_factory: HttpClientFactory,
+ ) -> Result<crate::UpdateOutput> {
++    // The public installer does not publish LoongArch packages.
++    if cfg!(target_arch = "loongarch64") {
++        let mut output = manual_update::unsupported(daemon).await?;
++        output.message = "Official daemon updates are unavailable on LoongArch64; install a complete CLI package and use `codex app-server daemon update --from-cli`.".to_string();
++        return Ok(output);
++    }
+     if daemon
+         .pid_file
+         .file_name()
+--- a/codex-rs/app-server-daemon/src/update_loop_tests.rs
++++ b/codex-rs/app-server-daemon/src/update_loop_tests.rs
+@@ -25,6 +25,40 @@
+ #[cfg(unix)]
+ use crate::managed_install::executable_identity_from_reader;
+ 
++#[cfg(all(target_os = "linux", target_arch = "loongarch64"))]
++#[tokio::test]
++async fn loongarch_official_update_is_unsupported_without_starting_an_updater() {
++    let temp = tempfile::TempDir::new().expect("home");
++    let home = temp.path();
++    let state = home.join("app-server-daemon");
++    let binary = home.join("packages/app-server-daemon/current/bin/codex");
++    std::fs::create_dir_all(binary.parent().expect("bin directory")).expect("package");
++    codex_utils_cargo_bin::write_executable(&binary, "#!/bin/sh\necho codex-cli 0.162.1\n")
++        .expect("executable");
++    let daemon = crate::Daemon {
++        log_diagnostics: false,
++        socket_path: state.join("daemon.sock"),
++        pid_file: state.join("daemon.pid"),
++        update_pid_file: state.join("daemon-updater.pid"),
++        operation_lock_file: state.join("daemon.lock"),
++        settings_file: state.join("settings.json"),
++        managed_codex_bin: binary,
++    };
++    let factory = codex_http_client::HttpClientFactory::new(
++        codex_http_client::OutboundProxyPolicy::ReqwestDefault,
++    );
++    let output = super::request_manual_update(&daemon, factory)
++        .await
++        .expect("unsupported update");
++    assert_eq!(output.status, crate::UpdateStatus::Unsupported);
++    assert_eq!(output.installed_version.as_deref(), Some("0.162.1"));
++    assert!(output.message.contains("--from-cli"));
++    assert!(
++        !state.exists(),
++        "update must not start a worker or change daemon state"
++    );
++}
++
+ #[tokio::test]
+ async fn installer_fetch_uses_exact_url_and_preserves_bytes() {
+     let script = b"#!/bin/sh\nprintf 'update bytes'\n".to_vec();
+@@ -419,7 +453,10 @@
+ 
+ #[cfg(unix)]
+ fn manual_update_daemon(home: &TempDir) -> (Daemon, String) {
+-    let target = if cfg!(target_os = "macos") {
++    // These shell fixtures model an official release, independently of the host CPU.
++    let target = if cfg!(target_arch = "loongarch64") {
++        "x86_64-unknown-linux-musl".to_string()
++    } else if cfg!(target_os = "macos") {
+         format!("{}-apple-darwin", std::env::consts::ARCH)
+     } else {
+         format!("{}-unknown-linux-musl", std::env::consts::ARCH)
+--- a/codex-rs/app-server-daemon/src/managed_install_path_tests.rs
++++ b/codex-rs/app-server-daemon/src/managed_install_path_tests.rs
+@@ -1,5 +1,25 @@
+ use pretty_assertions::assert_eq;
+ 
++#[cfg(unix)]
++#[test]
++fn loongarch_packages_are_not_eligible_for_official_automatic_updates() {
++    for target in [
++        "loongarch64-unknown-linux-gnu",
++        "loongarch64-unknown-linux-musl",
++    ] {
++        let home = tempfile::TempDir::new().expect("home");
++        let root = home.path().join("packages/app-server-daemon");
++        let name = format!("0.162.1-{target}");
++        let release = root.join("releases").join(&name);
++        let binary = release.join("bin/codex");
++        std::fs::create_dir_all(binary.parent().expect("bin directory")).expect("package");
++        std::fs::write(&binary, b"codex").expect("binary");
++        std::os::unix::fs::symlink(&release, root.join("current")).expect("selection");
++        std::fs::write(root.join("auto-update-version"), name).expect("latest marker");
++        assert!(!super::is_stable_standalone_release(home.path(), &binary));
++    }
++}
++
+ #[test]
+ fn discovers_package_and_legacy_installs() {
+     let home = tempfile::TempDir::new().expect("home");
