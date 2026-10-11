@@ -93,4 +93,9 @@ PY
 python3 "$REPO_ROOT/scripts/smoke-code-mode-host.py" \
   "$verify_root/bin/codex-code-mode-host"
 
+if [[ "$CODEX_VERSION" == "0.162.1" && "$(uname -m)" == "loongarch64" ]]; then
+  TMPDIR="$(cd "$WORK_ROOT" && pwd)" python3 "$REPO_ROOT/scripts/smoke-daemon.py" \
+    "$verify_root/bin/codex"
+fi
+
 log "Release package verification passed: $archive"
